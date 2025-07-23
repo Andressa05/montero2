@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Montero Web - Controle de Acertos</title>
+  <style>
+    * { box-sizing: border-box; font-family: Arial, sans-serif; }
+    body { margin: 0; padding: 0; background: #f5f5f5; }
+    .container { max-width: 400px; margin: 10vh auto; background: white; padding: 2rem; border-radius: 10px; box-shadow: 0 0 10px #ccc; }
+    h2 { text-align: center; margin-bottom: 1.5rem; }
+    label { display: block; margin-bottom: .5rem; }
+    input[type="text"], input[type="password"] {
+      width: 100%; padding: .6rem; margin-bottom: 1rem; border: 1px solid #ccc; border-radius: 5px;
+    }
+    .password-field { position: relative; }
+    .toggle-password {
+      position: absolute; top: 10px; right: 10px; cursor: pointer;
+      font-size: 1rem; color: #555;
+    }
+    button {
+      width: 100%; padding: .8rem; background-color: #2c7be5;
+      color: white; border: none; border-radius: 5px;
+      font-size: 1rem; cursor: pointer;
+    }
+    .error { color: red; text-align: center; margin-top: 1rem; }
+    #telaPrincipal { display: none; }
+  </style>
+</head>
+<body>
+  <div class="container" id="telaLogin">
+    <h2>Montero Web</h2>
+    <form id="formLogin" autocomplete="off">
+      <label for="usuario">Usuário:</label>
+      <input type="text" id="usuario" required autocomplete="off"/>
+
+      <label for="senha">Senha:</label>
+      <div class="password-field">
+        <input type="password" id="senha" required autocomplete="new-password"/>
+        <span class="toggle-password" onclick="toggleSenha()">👁️</span>
+      </div>
+
+      <button type="submit">Entrar</button>
+      <div class="error" id="erroLogin"></div>
+    </form>
+  </div>
+
+  <!-- A próxima parte será a tela principal -->
+
+  <div id="telaPrincipal">
+      <div style="max-width: 900px; margin: 2rem auto; background: white; padding: 1.5rem; border-radius: 10px; box-shadow: 0 0 10px #ccc;">
+    <h2 style="text-align: center; margin-bottom: 1rem;">Controle de Acertos</h2>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 1rem;">
+      <div style="flex: 1 1 200px;">
+        <label>Data:</label>
+        <input type="date" id="data" required>
+      </div>
+      <div style="flex: 1 1 200px;">
+        <label>Motorista:</label>
+        <input type="text" id="motorista" placeholder="Nome do motorista" required>
+      </div>
+      <div style="flex: 1 1 200px;">
+        <label>Caminhão:</label>
+        <input type="text" id="caminhao" placeholder="Nome do caminhão" required>
+      </div>
+      <div style="flex: 1 1 200px;">
+        <label>Frete (R$):</label>
+        <input type="number" id="frete" placeholder="0,00" required>
+      </div>
+      <div style="flex: 1 1 200px;">
+        <label>Comissão (R$):</label>
+        <input type="number" id="comissao" placeholder="0,00" required>
+      </div>
+      <div style="flex: 1 1 200px;">
+        <label>Forma de pagamento:</label>
+        <select id="formaPagamento">
+          <option>Dinheiro</option>
+          <option>PIX</option>
+          <option>Transferência</option>
+        </select>
+      </div>
+      <div style="flex: 1 1 100%;">
+        <label>Observação:</label>
+        <input type="text" id="observacao" placeholder="Alguma observação...">
+      </div>
+    </div>
+
+    <hr style="margin: 2rem 0;">
+
+    <h3>Despesas da Viagem</h3>
+    <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+      <input type="text" id="descDespesa" placeholder="Descrição da despesa" style="flex: 2;">
+      <input type="number" id="valorDespesa" placeholder="Valor (R$)" style="flex: 1;">
+      <button onclick="adicionarDespesa()">Adicionar</button>
+    </div>
+    <ul id="listaDespesas" style="list-style: none; padding-left: 0;"></ul>
+
+    <div style="margin-top: 1.5rem;">
+      <strong>Sobra: </strong>
+      <span id="sobra" style="font-size: 1.2rem;">R$ 0,00</span>
+    </div>
+
+    <div style="margin-top: 2rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+      <button onclick="salvarAcerto()">Salvar Acerto</button>
+      <button onclick="limparCampos()">Limpar Campos</button>
+    </div>
+  </div>
+<hr style="margin: 2rem 0;">
+<h3>Acertos Salvos</h3>
+<table border="1" width="100%" id="tabelaAcertos" style="border-collapse: collapse;">
+  <thead style="background-color: #eaeaea;">
+    <tr>
+      <th>Data</th>
+      <th>Motorista</th>
+      <th>Caminhão</th>
+      <th>Frete</th>
+      <th>Comissão</th>
+      <th>Sobra</th>
+      <th>Ações</th>
+    </tr>
+  </thead>
+  <tbody id="corpoTabela"></tbody>
+</table>
+
+ <script>
+  // Verifica se já está logado ao carregar
+  if (localStorage.getItem("logado") === "sim") {
+    document.getElementById('telaLogin').style.display = 'none';
+    document.getElementById('telaPrincipal').style.display = 'block';
+    renderConteudo(); // se existir
+    carregarAcertos();
+  }
+
+  const formLogin = document.getElementById('formLogin');
+  const erroLogin = document.getElementById('erroLogin');
+
+  formLogin.addEventListener('submit', function(e) {
+    e.preventDefault();
+    const user = document.getElementById('usuario').value.trim();
+    const senha = document.getElementById('senha').value;
+
+    if (user === 'master' && senha === '123mudar') {
+      localStorage.setItem('logado', 'sim');
+      document.getElementById('telaLogin').style.display = 'none';
+      document.getElementById('telaPrincipal').style.display = 'block';
+      renderConteudo(); // se você estiver usando essa função
+      carregarAcertos();
+    } else {
+      erroLogin.textContent = 'Usuário ou senha inválidos.';
+    }
+  });
+
+  // Função para mostrar/ocultar senha
+  function toggleSenha() {
+    const senhaInput = document.getElementById('senha');
+    senhaInput.type = senhaInput.type === 'password' ? 'text' : 'password';
+  }
+
+  // Função para sair
+  function logout() {
+    localStorage.removeItem("logado");
+    location.reload();
+  }
+</script>
+
+  let despesas = [];
+
+  function adicionarDespesa() {
+    const desc = document.getElementById("descDespesa").value;
+    const valor = parseFloat(document.getElementById("valorDespesa").value);
+
+    if (!desc || isNaN(valor)) return;
+
+    despesas.push({ descricao: desc, valor });
+    atualizarListaDespesas();
+    calcularSobra();
+
+    document.getElementById("descDespesa").value = '';
+    document.getElementById("valorDespesa").value = '';
+  }
+
+  function atualizarListaDespesas() {
+    const ul = document.getElementById("listaDespesas");
+    ul.innerHTML = '';
+    despesas.forEach((d, i) => {
+      const li = document.createElement("li");
+      li.innerHTML = `${d.descricao}: R$ ${d.valor.toFixed(2).replace('.', ',')} 
+        <button onclick="removerDespesa(${i})" style="margin-left:10px;color:red;">✖</button>`;
+      ul.appendChild(li);
+    });
+  }
+
+  function removerDespesa(index) {
+    despesas.splice(index, 1);
+    atualizarListaDespesas();
+    calcularSobra();
+  }
+
+  function calcularSobra() {
+    const frete = parseFloat(document.getElementById("frete").value) || 0;
+    const comissao = parseFloat(document.getElementById("comissao").value) || 0;
+    const totalDespesas = despesas.reduce((acc, d) => acc + d.valor, 0);
+    const sobra = frete - comissao - totalDespesas;
+
+    const sobraSpan = document.getElementById("sobra");
+    sobraSpan.textContent = `R$ ${sobra.toFixed(2).replace('.', ',')}`;
+    sobraSpan.style.color = sobra < 0 ? 'red' : 'green';
+  }
+
+  document.getElementById("frete").addEventListener("input", calcularSobra);
+  document.getElementById("comissao").addEventListener("input", calcularSobra);
+
+  function limparCampos() {
+    document.getElementById("data").value = '';
+    document.getElementById("motorista").value = '';
+    document.getElementById("caminhao").value = '';
+    document.getElementById("frete").value = '';
+    document.getElementById("comissao").value = '';
+    document.getElementById("observacao").value = '';
+    document.getElementById("formaPagamento").selectedIndex = 0;
+    despesas = [];
+    atualizarListaDespesas();
+    calcularSobra();
+  }
+
+  function salvarAcerto() {
+    alert("⚙️ Em breve: salvando no Firebase...");
+  }
+</script>
+<!-- Firebase App (core) -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<!-- Firebase Firestore -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+
+<script>
+  // 🔧 COLE AQUI A CONFIGURAÇÃO DO FIREBASE QUE VOCÊ COPIOU
+  const firebaseConfig = {
+    apiKey: "SUA_API_KEY",
+    authDomain: "SEU_DOMINIO.firebaseapp.com",
+    projectId: "SEU_PROJECT_ID",
+    storageBucket: "SEU_BUCKET.appspot.com",
+    messagingSenderId: "SEU_SENDER_ID",
+    appId: "SUA_APP_ID"
+  };
+
+  // Inicializar Firebase
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+</script>
+
+</body>
+</html>
