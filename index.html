@@ -3,209 +3,259 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Montero - Sistema de Acertos</title>
+  <title>Montero Web - Controle de Acertos</title>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      background-color: #f8f9fa;
+    * { box-sizing: border-box; font-family: Arial, sans-serif; }
+    body { margin: 0; padding: 0; background: #f5f5f5; }
+    .container { max-width: 450px; margin: 10vh auto; background: white; padding: 2rem; border-radius: 10px; box-shadow: 0 0 10px #ccc; }
+    h2 { text-align: center; margin-bottom: 1.5rem; }
+    label { display: block; margin-bottom: .5rem; }
+    input[type="text"], input[type="password"], input[type="number"], input[type="date"], select {
+      width: 100%; padding: .6rem; margin-bottom: 1rem; border: 1px solid #ccc; border-radius: 5px;
     }
-
-    .container {
-      max-width: 900px;
-      margin: auto;
-      padding: 20px;
-      background: #fff;
-      border-radius: 8px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    .password-field { position: relative; }
+    .toggle-password {
+      position: absolute; top: 10px; right: 10px; cursor: pointer;
+      font-size: 1rem; color: #555;
     }
-
-    h2 {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-
-    input, select, textarea {
-      width: 100%;
-      padding: 10px;
-      margin-top: 5px;
-      margin-bottom: 15px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-    }
-
     button {
-      width: 100%;
-      padding: 10px;
-      background-color: #1976d2;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      margin-top: 5px;
+      padding: .6rem 1rem; background-color: #2c7be5;
+      color: white; border: none; border-radius: 5px;
+      font-size: 1rem; cursor: pointer;
     }
-
-    button:hover {
-      background-color: #135ba1;
-    }
-
-    .hidden {
-      display: none;
-    }
-
-    #erroLogin {
-      color: red;
-      text-align: center;
-      margin-bottom: 10px;
-    }
-
-    .sobra {
-      font-weight: bold;
-      color: green;
-      font-size: 1.2em;
+    .error { color: red; text-align: center; margin-top: 1rem; }
+    #telaPrincipal { display: none; padding: 1rem; max-width: 1100px; margin: auto; }
+    table { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: 0.9rem; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    th { background: #eee; }
+    .positivo { color: green; font-weight: bold; }
+    .negativo { color: red; font-weight: bold; }
+    @media (max-width: 768px) {
+      table th:nth-child(1), table td:nth-child(1) { display: none; }
     }
   </style>
 </head>
 <body>
 
+<!-- TELA DE LOGIN -->
 <div class="container" id="telaLogin">
-  <h2>Login</h2>
-  <form id="formLogin">
+  <h2>Montero Web</h2>
+  <form id="formLogin" autocomplete="off">
     <label for="usuario">Usuário:</label>
-    <input type="text" id="usuario" required>
+    <input type="text" id="usuario" required autocomplete="off"/>
 
     <label for="senha">Senha:</label>
-    <input type="password" id="senha" required>
-    <button type="button" onclick="toggleSenha()">Mostrar/Ocultar Senha</button>
+    <div class="password-field">
+      <input type="password" id="senha" required autocomplete="new-password"/>
+      <span class="toggle-password" onclick="toggleSenha()">👁️</span>
+    </div>
 
-    <div id="erroLogin"></div>
     <button type="submit">Entrar</button>
+    <div class="error" id="erroLogin"></div>
   </form>
 </div>
 
-<div class="container hidden" id="telaPrincipal">
-  <h2>Sistema de Acertos</h2>
+<!-- TELA PRINCIPAL COMEÇA NA PARTE 2 -->
 
-  <!-- Campos e botões virão na Parte 2 -->
-  <form id="formAcerto">
-    <label for="data">Data:</label>
-    <input type="date" id="data" required>
-
-    <label for="motorista">Motorista:</label>
-    <input type="text" id="motorista" required>
-
-    <label for="caminhao">Caminhão:</label>
-    <input type="text" id="caminhao" required>
-
-    <label for="frete">Frete (R$):</label>
-    <input type="number" id="frete" step="0.01" required>
-
-    <label for="comissao">Comissão (R$):</label>
-    <input type="number" id="comissao" step="0.01" required>
-
-    <label for="formaPagamento">Forma de pagamento:</label>
-    <select id="formaPagamento" required>
-      <option value="Dinheiro">Dinheiro</option>
-      <option value="Pix">Pix</option>
-      <option value="Transferência">Transferência</option>
-      <option value="Cheque">Cheque</option>
-    </select>
-
-    <label for="observacao">Observação:</label>
-    <textarea id="observacao" rows="2" placeholder="Alguma observação..."></textarea>
-
-    <hr>
-    <h3>Despesas da Viagem</h3>
-    <ul id="listaDespesas"></ul>
-
-    <input type="text" id="descDespesa" placeholder="Descrição da Despesa">
-    <input type="number" id="valorDespesa" placeholder="Valor (R$)" step="0.01">
-    <button type="button" onclick="adicionarDespesa()">Adicionar</button>
-
-    <p class="sobra">Sobra: <span id="sobra">R$ 0,00</span></p>
-
-    <button type="button" onclick="salvarAcerto()">Salvar Acerto</button>
-    <button type="button" onclick="limparCampos()">Limpar Campos</button>
-  </form>
-
-  <hr>
-  <h3>Acertos Salvos</h3>
-  <div>
-    <label for="filtroDataInicio">Data Inicial:</label>
-    <input type="date" id="filtroDataInicio">
-    <label for="filtroDataFim">Data Final:</label>
-    <input type="date" id="filtroDataFim">
-    <button onclick="filtrarAcertos()">Filtrar</button>
-    <button onclick="gerarRelatorio()">Gerar Relatório PDF</button>
+<div id="telaPrincipal">
+  <!-- Botão de logout -->
+  <div style="text-align:right; margin-bottom:10px;">
+    <button onclick="logout()">Sair</button>
   </div>
 
-  <table id="tabelaAcertos" border="1" width="100%" style="margin-top: 10px;">
-    <thead>
+  <h2 style="text-align:center">Controle de Acertos</h2>
+
+  <!-- Bloco de cadastro -->
+  <div style="display:flex; flex-wrap:wrap; gap:1rem;">
+    <input type="date" id="data" style="flex:1" />
+    <input type="text" id="motorista" placeholder="Motorista" style="flex:2" />
+    <input type="text" id="caminhao" placeholder="Caminhão" style="flex:2" />
+    <input type="number" id="frete" placeholder="Frete (R$)" style="flex:1" />
+    <input type="number" id="comissao" placeholder="Comissão (R$)" style="flex:1" />
+    <select id="formaPagamento" style="flex:1">
+      <option>Dinheiro</option>
+      <option>PIX</option>
+      <option>Transferência</option>
+    </select>
+    <input type="text" id="observacao" placeholder="Observação" style="flex:3" />
+  </div>
+
+  <!-- Continuação na Parte 3: Despesas -->
+  <!-- Cadastro de Despesas -->
+  <h3 style="margin-top:2rem;">Despesas da Viagem</h3>
+  <div style="display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap:wrap;">
+    <input type="text" id="descDespesa" placeholder="Descrição da despesa" style="flex: 2;">
+    <input type="number" id="valorDespesa" placeholder="Valor (R$)" style="flex: 1;">
+    <button onclick="adicionarDespesa()">Adicionar</button>
+  </div>
+
+  <!-- Lista de despesas -->
+  <ul id="listaDespesas" style="list-style: none; padding-left: 0;"></ul>
+
+  <!-- Resultado da sobra -->
+  <div style="margin-top: 1.5rem;">
+    <strong>Sobra: </strong>
+    <span id="sobra" style="font-size: 1.2rem;">R$ 0,00</span>
+  </div>
+
+  <!-- Botões de ação -->
+  <div style="margin-top: 2rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+    <button onclick="salvarAcerto()">Salvar Acerto</button>
+    <button onclick="limparCampos()">Limpar Campos</button>
+  </div>
+  <hr style="margin:2rem 0;">
+
+  <h3>Acertos Salvos</h3>
+
+  <!-- Filtros -->
+  <div style="display:flex; flex-wrap:wrap; gap:1rem; margin-bottom:1rem;">
+    <input type="date" id="filtroDataInicio" style="flex:1">
+    <input type="date" id="filtroDataFim" style="flex:1">
+    <input type="text" id="filtroMotorista" placeholder="Filtrar por motorista" style="flex:2">
+    <button onclick="carregarAcertos()">Filtrar</button>
+  </div>
+
+  <!-- Tabela de acertos -->
+  <table border="1" width="100%" style="border-collapse:collapse; text-align:left;">
+    <thead style="background:#f0f0f0;">
       <tr>
         <th>Data</th>
         <th>Motorista</th>
         <th>Caminhão</th>
         <th>Frete</th>
         <th>Comissão</th>
+        <th>Despesas</th>
         <th>Sobra</th>
         <th>Ações</th>
       </tr>
     </thead>
-    <tbody id="corpoTabelaAcertos"></tbody>
+    <tbody id="tabelaAcertos"></tbody>
   </table>
-</div>
 <script>
-  let despesas = [];
-  let editandoIndex = -1;
+  // Referência para a coleção "acertos" no Firebase
+  const acertosRef = collection(db, "acertos");
 
-  document.addEventListener('DOMContentLoaded', () => {
-    if (localStorage.getItem("logado") === "sim") {
-      document.getElementById('telaLogin').style.display = 'none';
-      document.getElementById('telaPrincipal').style.display = 'block';
-      carregarAcertos();
-    }
+  async function carregarAcertos() {
+    const tabela = document.getElementById("tabelaAcertos");
+    tabela.innerHTML = "";
 
-    const formLogin = document.getElementById('formLogin');
-    const erroLogin = document.getElementById('erroLogin');
+    const filtroInicio = document.getElementById("filtroDataInicio").value;
+    const filtroFim = document.getElementById("filtroDataFim").value;
+    const filtroMotorista = document.getElementById("filtroMotorista").value.trim().toLowerCase();
 
-    formLogin.addEventListener('submit', function (e) {
-      e.preventDefault();
-      const user = document.getElementById('usuario').value.trim();
-      const senha = document.getElementById('senha').value;
-      if (user === 'master' && senha === '123mudar') {
-        localStorage.setItem('logado', 'sim');
-        document.getElementById('telaLogin').style.display = 'none';
-        document.getElementById('telaPrincipal').style.display = 'block';
-        carregarAcertos();
-      } else {
-        erroLogin.textContent = 'Usuário ou senha inválidos.';
-      }
+    const querySnapshot = await getDocs(acertosRef);
+    let totalSobra = 0;
+    let totalDespesas = 0;
+
+    querySnapshot.forEach((docSnap) => {
+      const acerto = docSnap.data();
+      const id = docSnap.id;
+
+      // Filtros
+      if (filtroInicio && acerto.data < filtroInicio) return;
+      if (filtroFim && acerto.data > filtroFim) return;
+      if (filtroMotorista && !acerto.motorista.toLowerCase().includes(filtroMotorista)) return;
+
+      const despesasTotal = (acerto.despesas || []).reduce((acc, d) => acc + parseFloat(d.valor), 0);
+      const sobra = acerto.frete - acerto.comissao - despesasTotal;
+
+      totalSobra += sobra;
+      totalDespesas += despesasTotal;
+
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${acerto.data}</td>
+        <td>${acerto.motorista}</td>
+        <td>${acerto.caminhao}</td>
+        <td>${formatar(acerto.frete)}</td>
+        <td>${formatar(acerto.comissao)}</td>
+        <td>${formatar(despesasTotal)}</td>
+        <td style="color:${sobra < 0 ? 'red' : 'green'}">${formatar(sobra)}</td>
+        <td>
+          <button onclick="editarAcerto('${id}')">✏️</button>
+          <button onclick="excluirAcerto('${id}')">🗑️</button>
+          <button onclick='gerarRecibo(${JSON.stringify(acerto)}, true)'>📄 Recibo</button>
+          <button onclick='gerarRecibo(${JSON.stringify(acerto)}, false)'>📄 Sem Assinatura</button>
+        </td>
+      `;
+      tabela.appendChild(tr);
     });
-  });
 
-  function toggleSenha() {
-    const senhaInput = document.getElementById('senha');
-    senhaInput.type = senhaInput.type === 'password' ? 'text' : 'password';
+    // Mostra total (opcional)
+    const totalRow = document.createElement("tr");
+    totalRow.innerHTML = `
+      <td colspan="5"><strong>Totais:</strong></td>
+      <td><strong>${formatar(totalDespesas)}</strong></td>
+      <td><strong>${formatar(totalSobra)}</strong></td>
+      <td></td>
+    `;
+    tabela.appendChild(totalRow);
+  }
+</script>
+<script>
+  // Formata valor em R$ brasileiro
+  function formatar(valor) {
+    return valor.toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL"
+    });
   }
 
+  // Editar acerto: carrega campos e despesas
+  async function editarAcerto(id) {
+    const docSnap = await getDoc(doc(db, "acertos", id));
+    if (!docSnap.exists()) return;
+
+    const acerto = docSnap.data();
+    idAcertoAtual = id;
+
+    document.getElementById("data").value = acerto.data;
+    document.getElementById("motorista").value = acerto.motorista;
+    document.getElementById("caminhao").value = acerto.caminhao;
+    document.getElementById("frete").value = acerto.frete;
+    document.getElementById("comissao").value = acerto.comissao;
+    document.getElementById("formaPagamento").value = acerto.formaPagamento;
+    document.getElementById("observacao").value = acerto.observacao || "";
+
+    despesas = acerto.despesas || [];
+    atualizarListaDespesas();
+  }
+
+  // Excluir acerto do Firebase
+  async function excluirAcerto(id) {
+    if (confirm("Deseja realmente excluir este acerto?")) {
+      await deleteDoc(doc(db, "acertos", id));
+      carregarAcertos();
+    }
+  }
+</script>
+<script>
+  let despesas = [];
+
   function adicionarDespesa() {
-    const desc = document.getElementById("descDespesa").value;
+    const desc = document.getElementById("descDespesa").value.trim();
     const valor = parseFloat(document.getElementById("valorDespesa").value);
+
     if (!desc || isNaN(valor)) return;
+
     despesas.push({ descricao: desc, valor });
-    document.getElementById("descDespesa").value = '';
-    document.getElementById("valorDespesa").value = '';
     atualizarListaDespesas();
     calcularSobra();
+
+    document.getElementById("descDespesa").value = '';
+    document.getElementById("valorDespesa").value = '';
   }
 
   function atualizarListaDespesas() {
     const ul = document.getElementById("listaDespesas");
-    ul.innerHTML = "";
+    ul.innerHTML = '';
     despesas.forEach((d, i) => {
       const li = document.createElement("li");
-      li.innerHTML = `${d.descricao}: R$ ${d.valor.toFixed(2).replace('.', ',')} 
-        <button onclick="removerDespesa(${i})">❌</button>`;
+      li.innerHTML = `${d.descricao}: ${formatar(d.valor)} 
+        <button onclick="removerDespesa(${i})" style="margin-left:10px;color:red;">✖</button>`;
       ul.appendChild(li);
     });
   }
@@ -221,233 +271,151 @@
     const comissao = parseFloat(document.getElementById("comissao").value) || 0;
     const totalDespesas = despesas.reduce((acc, d) => acc + d.valor, 0);
     const sobra = frete - comissao - totalDespesas;
+
     const sobraSpan = document.getElementById("sobra");
-    sobraSpan.textContent = `R$ ${sobra.toFixed(2).replace('.', ',')}`;
-    sobraSpan.style.color = sobra < 0 ? 'red' : 'green';
+    sobraSpan.textContent = formatar(sobra);
+    sobraSpan.style.color = sobra < 0 ? "red" : "green";
   }
 
-  // Atualizar sobra ao digitar
   document.getElementById("frete").addEventListener("input", calcularSobra);
   document.getElementById("comissao").addEventListener("input", calcularSobra);
-</script>
-<!-- Firebase SDKs -->
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script>
-  // Configuração Firebase
-  const firebaseConfig = {
-    apiKey: "AIzaSyAdz_cTwg0N97wGIT4juTl1OXs3-HJY0X8",
-    authDomain: "montero-web.firebaseapp.com",
-    projectId: "montero-web",
-    storageBucket: "montero-web.appspot.com",
-    messagingSenderId: "673171025883",
-    appId: "1:673171025883:web:8e845ea1460792e54bc1fe"
-  };
-
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore();
-
-  function salvarAcerto() {
-    const acerto = {
-      data: document.getElementById("data").value,
-      motorista: document.getElementById("motorista").value,
-      caminhao: document.getElementById("caminhao").value,
-      frete: parseFloat(document.getElementById("frete").value),
-      comissao: parseFloat(document.getElementById("comissao").value),
-      formaPagamento: document.getElementById("formaPagamento").value,
-      observacao: document.getElementById("observacao").value,
-      despesas: despesas
-    };
-
-    if (editandoIndex >= 0) {
-      db.collection("acertos").doc(editandoIndex).update(acerto).then(() => {
-        limparCampos();
-        carregarAcertos();
-        editandoIndex = -1;
-      });
-    } else {
-      db.collection("acertos").add(acerto).then(() => {
-        limparCampos();
-        carregarAcertos();
-      });
-    }
-  }
-
-  function carregarAcertos() {
-    const tbody = document.getElementById("corpoTabelaAcertos");
-    tbody.innerHTML = "";
-    db.collection("acertos").orderBy("data", "desc").get().then(snapshot => {
-      snapshot.forEach(doc => {
-        const acerto = doc.data();
-        const despesasTotal = acerto.despesas.reduce((acc, d) => acc + d.valor, 0);
-        const sobra = acerto.frete - acerto.comissao - despesasTotal;
-        const tr = document.createElement("tr");
-
-        tr.innerHTML = `
-          <td>${acerto.data}</td>
-          <td>${acerto.motorista}</td>
-          <td>${acerto.caminhao}</td>
-          <td>R$ ${acerto.frete.toFixed(2)}</td>
-          <td>R$ ${acerto.comissao.toFixed(2)}</td>
-          <td style="color:${sobra < 0 ? 'red' : 'green'};">R$ ${sobra.toFixed(2)}</td>
-          <td>
-            <button onclick="editarAcerto('${doc.id}', ${JSON.stringify(acerto).replace(/"/g, '&quot;')})">✏️</button>
-            <button onclick="excluirAcerto('${doc.id}')" style="color:red;">🗑️</button>
-            <button onclick="gerarRecibo(${JSON.stringify(acerto).replace(/"/g, '&quot;')})">📄</button>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
-    });
-  }
-
-  function editarAcerto(id, acerto) {
-    editandoIndex = id;
-    document.getElementById("data").value = acerto.data;
-    document.getElementById("motorista").value = acerto.motorista;
-    document.getElementById("caminhao").value = acerto.caminhao;
-    document.getElementById("frete").value = acerto.frete;
-    document.getElementById("comissao").value = acerto.comissao;
-    document.getElementById("formaPagamento").value = acerto.formaPagamento;
-    document.getElementById("observacao").value = acerto.observacao;
-    despesas = acerto.despesas;
-    atualizarListaDespesas();
-    calcularSobra();
-  }
-
-  function excluirAcerto(id) {
-    if (confirm("Tem certeza que deseja excluir?")) {
-      db.collection("acertos").doc(id).delete().then(() => {
-        carregarAcertos();
-      });
-    }
-  }
 
   function limparCampos() {
-    document.getElementById("formAcerto").reset();
+    document.getElementById("data").value = "";
+    document.getElementById("motorista").value = "";
+    document.getElementById("caminhao").value = "";
+    document.getElementById("frete").value = "";
+    document.getElementById("comissao").value = "";
+    document.getElementById("formaPagamento").selectedIndex = 0;
+    document.getElementById("observacao").value = "";
     despesas = [];
     atualizarListaDespesas();
     calcularSobra();
-    editandoIndex = -1;
+    idAcertoAtual = null;
   }
+</script>
+<script>
+  function gerarRecibo(acerto, comAssinatura = true) {
+    const doc = new window.jspdf.jsPDF();
+    const empresa = localStorage.getItem("empresa") || "Montero Transportes";
+    const margem = 20;
+    let y = 20;
 
-  function gerarRecibo(acerto) {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
+    doc.setFontSize(16);
+    doc.text(empresa, 105, y, null, null, "center");
 
-    doc.setFontSize(14);
-    doc.text("Recibo de Pagamento - Montero Transportes", 20, 20);
+    y += 15;
     doc.setFontSize(12);
-    doc.text(`Data: ${acerto.data}`, 20, 40);
-    doc.text(`Motorista: ${acerto.motorista}`, 20, 50);
-    doc.text(`Caminhão: ${acerto.caminhao}`, 20, 60);
-    doc.text(`Comissão: R$ ${acerto.comissao.toFixed(2)}`, 20, 70);
-    doc.text(`Forma de pagamento: ${acerto.formaPagamento}`, 20, 80);
-    doc.text(`Observação: ${acerto.observacao}`, 20, 90);
+    doc.text(`Data da Viagem: ${acerto.data}`, margem, y); y += 10;
+    doc.text(`Motorista: ${acerto.motorista}`, margem, y); y += 10;
+    doc.text(`Caminhão: ${acerto.caminhao}`, margem, y); y += 10;
+    doc.text(`Forma de Pagamento: ${acerto.formaPagamento}`, margem, y); y += 10;
+    doc.text(`Valor Pago (Comissão): ${formatar(acerto.comissao)}`, margem, y); y += 10;
+    doc.text(`Observação: ${acerto.observacao || "-"}`, margem, y); y += 10;
 
-    doc.text("Assinatura do motorista: ______________________", 20, 120);
-    doc.text("Assinatura do proprietário: ___________________", 20, 140);
+    if (comAssinatura) {
+      y += 20;
+      doc.text("_________________________________________", margem, y); y += 8;
+      doc.text("Assinatura do Motorista", margem, y);
+      doc.text("_________________________________________", 120, y - 8);
+      doc.text("Assinatura do Proprietário", 120, y);
+    }
+
     doc.save(`recibo_${acerto.motorista}.pdf`);
   }
 </script>
 <script>
-  function filtrarAcertos() {
-    const inicio = document.getElementById("filtroDataInicio").value;
-    const fim = document.getElementById("filtroDataFim").value;
-    const tbody = document.getElementById("corpoTabelaAcertos");
-    tbody.innerHTML = "";
-
-    let totalDespesas = 0;
-    let totalSobra = 0;
-
-    db.collection("acertos").orderBy("data").get().then(snapshot => {
-      snapshot.forEach(doc => {
-        const acerto = doc.data();
-        const dataAcerto = acerto.data;
-
-        if ((!inicio || dataAcerto >= inicio) && (!fim || dataAcerto <= fim)) {
-          const despesasTotal = acerto.despesas.reduce((acc, d) => acc + d.valor, 0);
-          const sobra = acerto.frete - acerto.comissao - despesasTotal;
-
-          totalDespesas += despesasTotal;
-          totalSobra += sobra;
-
-          const tr = document.createElement("tr");
-          tr.innerHTML = `
-            <td>${acerto.data}</td>
-            <td>${acerto.motorista}</td>
-            <td>${acerto.caminhao}</td>
-            <td>R$ ${acerto.frete.toFixed(2)}</td>
-            <td>R$ ${acerto.comissao.toFixed(2)}</td>
-            <td style="color:${sobra < 0 ? 'red' : 'green'};">R$ ${sobra.toFixed(2)}</td>
-            <td>
-              <button onclick="editarAcerto('${doc.id}', ${JSON.stringify(acerto).replace(/"/g, '&quot;')})">✏️</button>
-              <button onclick="excluirAcerto('${doc.id}')" style="color:red;">🗑️</button>
-              <button onclick="gerarRecibo(${JSON.stringify(acerto).replace(/"/g, '&quot;')})">📄</button>
-            </td>
-          `;
-          tbody.appendChild(tr);
-        }
-      });
-
-      const trTotais = document.createElement("tr");
-      trTotais.innerHTML = `
-        <td colspan="4"><strong>Totais:</strong></td>
-        <td><strong>Despesas: R$ ${totalDespesas.toFixed(2)}</strong></td>
-        <td><strong>Sobra: R$ ${totalSobra.toFixed(2)}</strong></td>
-        <td></td>
-      `;
-      tbody.appendChild(trTotais);
-    });
-  }
-
-  function gerarRelatorio() {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
+  function gerarRelatorioPDF() {
+    const doc = new window.jspdf.jsPDF();
+    const empresa = localStorage.getItem("empresa") || "Montero Transportes";
     let y = 20;
+    const margem = 15;
 
-    doc.setFontSize(14);
-    doc.text("Relatório de Acertos - Montero Transportes", 20, y);
+    doc.setFontSize(16);
+    doc.text(`${empresa} - Relatório de Acertos`, 105, y, null, null, "center");
+    y += 15;
+    doc.setFontSize(10);
+
+    let totalSobra = 0;
+    let totalDespesas = 0;
+
+    acertosFiltrados.forEach((a, i) => {
+      if (y > 270) {
+        doc.addPage();
+        y = 20;
+      }
+
+      const sobra = a.frete - a.comissao - (a.despesas?.reduce((acc, d) => acc + d.valor, 0) || 0);
+      const totalDespesasAcerto = a.despesas?.reduce((acc, d) => acc + d.valor, 0) || 0;
+
+      totalSobra += sobra;
+      totalDespesas += totalDespesasAcerto;
+
+      doc.text(`${i + 1}) Data: ${a.data} - Motorista: ${a.motorista}`, margem, y); y += 6;
+      doc.text(`Caminhão: ${a.caminhao} | Frete: ${formatar(a.frete)} | Comissão: ${formatar(a.comissao)} | Sobra: ${formatar(sobra)}`, margem, y); y += 6;
+      doc.text(`Forma: ${a.formaPagamento} | Observação: ${a.observacao || "-"}`, margem, y); y += 6;
+
+      if (a.despesas && a.despesas.length) {
+        doc.text(`Despesas:`, margem, y); y += 6;
+        a.despesas.forEach(d => {
+          doc.text(` - ${d.descricao}: ${formatar(d.valor)}`, margem + 10, y); y += 6;
+        });
+      }
+
+      y += 8;
+    });
+
     y += 10;
+    doc.setFontSize(12);
+    doc.text(`Total de Despesas: ${formatar(totalDespesas)}`, margem, y); y += 8;
+    doc.text(`Total de Sobra: ${formatar(totalSobra)}`, margem, y);
 
-    const inicio = document.getElementById("filtroDataInicio").value;
-    const fim = document.getElementById("filtroDataFim").value;
+    doc.save(`relatorio_acertos.pdf`);
+  }
+</script>
+<script>
+  // Mostrar/ocultar senha com ícone de olhinho
+  function toggleSenha() {
+    const senhaInput = document.getElementById("senha");
+    senhaInput.type = senhaInput.type === "password" ? "text" : "password";
+  }
 
-    db.collection("acertos").orderBy("data").get().then(snapshot => {
-      let totalDespesas = 0;
-      let totalSobra = 0;
+  // Logout e limpar localStorage
+  function logout() {
+    localStorage.removeItem("logado");
+    document.getElementById("telaPrincipal").style.display = "none";
+    document.getElementById("telaLogin").style.display = "block";
+  }
 
-      snapshot.forEach(docSnap => {
-        const acerto = docSnap.data();
-        const data = acerto.data;
+  // Salvar nome personalizado da empresa no navegador
+  function salvarNomeEmpresa() {
+    const nome = prompt("Digite o nome da empresa:");
+    if (nome) {
+      localStorage.setItem("empresa", nome.trim());
+      alert("Nome da empresa atualizado!");
+    }
+  }
 
-        if ((!inicio || data >= inicio) && (!fim || data <= fim)) {
-          const despesasTotal = acerto.despesas.reduce((acc, d) => acc + d.valor, 0);
-          const sobra = acerto.frete - acerto.comissao - despesasTotal;
-          totalDespesas += despesasTotal;
-          totalSobra += sobra;
-
-          doc.setFontSize(11);
-          doc.text(`📅 ${acerto.data} | 👤 ${acerto.motorista} | 🚛 ${acerto.caminhao}`, 20, y); y += 6;
-          doc.text(`Frete: R$ ${acerto.frete.toFixed(2)} | Comissão: R$ ${acerto.comissao.toFixed(2)} | Sobra: R$ ${sobra.toFixed(2)}`, 20, y); y += 6;
-          doc.text(`Despesas: ${acerto.despesas.map(d => `${d.descricao} (R$ ${d.valor.toFixed(2)})`).join(", ")}`, 20, y); y += 8;
-          doc.line(20, y, 190, y); y += 6;
-        }
-
-        if (y > 260) {
-          doc.addPage();
-          y = 20;
-        }
-      });
-
-      doc.setFontSize(12);
-      doc.text(`🔎 Período: ${inicio || "..."} até ${fim || "..."}`, 20, y + 10);
-      doc.text(`💸 Total de Despesas: R$ ${totalDespesas.toFixed(2)}`, 20, y + 20);
-      doc.text(`📈 Total de Sobra: R$ ${totalSobra.toFixed(2)}`, 20, y + 30);
-      doc.save("relatorio_acertos.pdf");
+  // Formatar valor em BRL automaticamente
+  function formatar(valor) {
+    return valor.toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+      minimumFractionDigits: 2,
     });
   }
+
+  // Ajuste responsivo para esconder coluna data em telas pequenas
+  function ajustarLayoutMobile() {
+    const largura = window.innerWidth;
+    const colData = document.querySelectorAll(".colunaData");
+    colData.forEach(col => {
+      col.style.display = largura < 600 ? "none" : "table-cell";
+    });
+  }
+
+  window.addEventListener("resize", ajustarLayoutMobile);
+  document.addEventListener("DOMContentLoaded", ajustarLayoutMobile);
 </script>
 </body>
 </html>
