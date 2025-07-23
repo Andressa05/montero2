@@ -3,190 +3,209 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Montero Web - Controle de Acertos</title>
+  <title>Montero - Sistema de Acertos</title>
   <style>
-    * { box-sizing: border-box; font-family: Arial, sans-serif; }
-    body { margin: 0; padding: 0; background: #f5f5f5; }
-    .container { max-width: 400px; margin: 10vh auto; background: white; padding: 2rem; border-radius: 10px; box-shadow: 0 0 10px #ccc; }
-    h2 { text-align: center; margin-bottom: 1.5rem; }
-    label { display: block; margin-bottom: .5rem; }
-    input[type="text"], input[type="password"] {
-      width: 100%; padding: .6rem; margin-bottom: 1rem; border: 1px solid #ccc; border-radius: 5px;
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background-color: #f8f9fa;
     }
-    .password-field { position: relative; }
-    .toggle-password {
-      position: absolute; top: 10px; right: 10px; cursor: pointer;
-      font-size: 1rem; color: #555;
+
+    .container {
+      max-width: 900px;
+      margin: auto;
+      padding: 20px;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+
     button {
-      width: 100%; padding: .8rem; background-color: #2c7be5;
-      color: white; border: none; border-radius: 5px;
-      font-size: 1rem; cursor: pointer;
+      width: 100%;
+      padding: 10px;
+      background-color: #1976d2;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-top: 5px;
     }
-    .error { color: red; text-align: center; margin-top: 1rem; }
-    #telaPrincipal { display: none; }
+
+    button:hover {
+      background-color: #135ba1;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    #erroLogin {
+      color: red;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+
+    .sobra {
+      font-weight: bold;
+      color: green;
+      font-size: 1.2em;
+    }
   </style>
 </head>
 <body>
-  <div class="container" id="telaLogin">
-    <h2>Montero Web</h2>
-    <form id="formLogin" autocomplete="off">
-      <label for="usuario">Usuário:</label>
-      <input type="text" id="usuario" required autocomplete="off"/>
 
-      <label for="senha">Senha:</label>
-      <div class="password-field">
-        <input type="password" id="senha" required autocomplete="new-password"/>
-        <span class="toggle-password" onclick="toggleSenha()">👁️</span>
-      </div>
+<div class="container" id="telaLogin">
+  <h2>Login</h2>
+  <form id="formLogin">
+    <label for="usuario">Usuário:</label>
+    <input type="text" id="usuario" required>
 
-      <button type="submit">Entrar</button>
-      <div class="error" id="erroLogin"></div>
-    </form>
-  </div>
+    <label for="senha">Senha:</label>
+    <input type="password" id="senha" required>
+    <button type="button" onclick="toggleSenha()">Mostrar/Ocultar Senha</button>
 
-  <!-- A próxima parte será a tela principal -->
+    <div id="erroLogin"></div>
+    <button type="submit">Entrar</button>
+  </form>
+</div>
 
-  <div id="telaPrincipal">
-      <div style="max-width: 900px; margin: 2rem auto; background: white; padding: 1.5rem; border-radius: 10px; box-shadow: 0 0 10px #ccc;">
-    <h2 style="text-align: center; margin-bottom: 1rem;">Controle de Acertos</h2>
+<div class="container hidden" id="telaPrincipal">
+  <h2>Sistema de Acertos</h2>
 
-    <div style="display: flex; flex-wrap: wrap; gap: 1rem;">
-      <div style="flex: 1 1 200px;">
-        <label>Data:</label>
-        <input type="date" id="data" required>
-      </div>
-      <div style="flex: 1 1 200px;">
-        <label>Motorista:</label>
-        <input type="text" id="motorista" placeholder="Nome do motorista" required>
-      </div>
-      <div style="flex: 1 1 200px;">
-        <label>Caminhão:</label>
-        <input type="text" id="caminhao" placeholder="Nome do caminhão" required>
-      </div>
-      <div style="flex: 1 1 200px;">
-        <label>Frete (R$):</label>
-        <input type="number" id="frete" placeholder="0,00" required>
-      </div>
-      <div style="flex: 1 1 200px;">
-        <label>Comissão (R$):</label>
-        <input type="number" id="comissao" placeholder="0,00" required>
-      </div>
-      <div style="flex: 1 1 200px;">
-        <label>Forma de pagamento:</label>
-        <select id="formaPagamento">
-          <option>Dinheiro</option>
-          <option>PIX</option>
-          <option>Transferência</option>
-        </select>
-      </div>
-      <div style="flex: 1 1 100%;">
-        <label>Observação:</label>
-        <input type="text" id="observacao" placeholder="Alguma observação...">
-      </div>
-    </div>
+  <!-- Campos e botões virão na Parte 2 -->
+  <form id="formAcerto">
+    <label for="data">Data:</label>
+    <input type="date" id="data" required>
 
-    <hr style="margin: 2rem 0;">
+    <label for="motorista">Motorista:</label>
+    <input type="text" id="motorista" required>
 
+    <label for="caminhao">Caminhão:</label>
+    <input type="text" id="caminhao" required>
+
+    <label for="frete">Frete (R$):</label>
+    <input type="number" id="frete" step="0.01" required>
+
+    <label for="comissao">Comissão (R$):</label>
+    <input type="number" id="comissao" step="0.01" required>
+
+    <label for="formaPagamento">Forma de pagamento:</label>
+    <select id="formaPagamento" required>
+      <option value="Dinheiro">Dinheiro</option>
+      <option value="Pix">Pix</option>
+      <option value="Transferência">Transferência</option>
+      <option value="Cheque">Cheque</option>
+    </select>
+
+    <label for="observacao">Observação:</label>
+    <textarea id="observacao" rows="2" placeholder="Alguma observação..."></textarea>
+
+    <hr>
     <h3>Despesas da Viagem</h3>
-    <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
-      <input type="text" id="descDespesa" placeholder="Descrição da despesa" style="flex: 2;">
-      <input type="number" id="valorDespesa" placeholder="Valor (R$)" style="flex: 1;">
-      <button onclick="adicionarDespesa()">Adicionar</button>
-    </div>
-    <ul id="listaDespesas" style="list-style: none; padding-left: 0;"></ul>
+    <ul id="listaDespesas"></ul>
 
-    <div style="margin-top: 1.5rem;">
-      <strong>Sobra: </strong>
-      <span id="sobra" style="font-size: 1.2rem;">R$ 0,00</span>
-    </div>
+    <input type="text" id="descDespesa" placeholder="Descrição da Despesa">
+    <input type="number" id="valorDespesa" placeholder="Valor (R$)" step="0.01">
+    <button type="button" onclick="adicionarDespesa()">Adicionar</button>
 
-    <div style="margin-top: 2rem; display: flex; gap: 1rem; flex-wrap: wrap;">
-      <button onclick="salvarAcerto()">Salvar Acerto</button>
-      <button onclick="limparCampos()">Limpar Campos</button>
-    </div>
+    <p class="sobra">Sobra: <span id="sobra">R$ 0,00</span></p>
+
+    <button type="button" onclick="salvarAcerto()">Salvar Acerto</button>
+    <button type="button" onclick="limparCampos()">Limpar Campos</button>
+  </form>
+
+  <hr>
+  <h3>Acertos Salvos</h3>
+  <div>
+    <label for="filtroDataInicio">Data Inicial:</label>
+    <input type="date" id="filtroDataInicio">
+    <label for="filtroDataFim">Data Final:</label>
+    <input type="date" id="filtroDataFim">
+    <button onclick="filtrarAcertos()">Filtrar</button>
+    <button onclick="gerarRelatorio()">Gerar Relatório PDF</button>
   </div>
-<hr style="margin: 2rem 0;">
-<h3>Acertos Salvos</h3>
-<table border="1" width="100%" id="tabelaAcertos" style="border-collapse: collapse;">
-  <thead style="background-color: #eaeaea;">
-    <tr>
-      <th>Data</th>
-      <th>Motorista</th>
-      <th>Caminhão</th>
-      <th>Frete</th>
-      <th>Comissão</th>
-      <th>Sobra</th>
-      <th>Ações</th>
-    </tr>
-  </thead>
-  <tbody id="corpoTabela"></tbody>
-</table>
 
- <script>
-  // Verifica se já está logado ao carregar
-  if (localStorage.getItem("logado") === "sim") {
-    document.getElementById('telaLogin').style.display = 'none';
-    document.getElementById('telaPrincipal').style.display = 'block';
-    renderConteudo(); // se existir
-    carregarAcertos();
-  }
+  <table id="tabelaAcertos" border="1" width="100%" style="margin-top: 10px;">
+    <thead>
+      <tr>
+        <th>Data</th>
+        <th>Motorista</th>
+        <th>Caminhão</th>
+        <th>Frete</th>
+        <th>Comissão</th>
+        <th>Sobra</th>
+        <th>Ações</th>
+      </tr>
+    </thead>
+    <tbody id="corpoTabelaAcertos"></tbody>
+  </table>
+</div>
+<script>
+  let despesas = [];
+  let editandoIndex = -1;
 
-  const formLogin = document.getElementById('formLogin');
-  const erroLogin = document.getElementById('erroLogin');
-
-  formLogin.addEventListener('submit', function(e) {
-    e.preventDefault();
-    const user = document.getElementById('usuario').value.trim();
-    const senha = document.getElementById('senha').value;
-
-    if (user === 'master' && senha === '123mudar') {
-      localStorage.setItem('logado', 'sim');
+  document.addEventListener('DOMContentLoaded', () => {
+    if (localStorage.getItem("logado") === "sim") {
       document.getElementById('telaLogin').style.display = 'none';
       document.getElementById('telaPrincipal').style.display = 'block';
-      renderConteudo(); // se você estiver usando essa função
       carregarAcertos();
-    } else {
-      erroLogin.textContent = 'Usuário ou senha inválidos.';
     }
+
+    const formLogin = document.getElementById('formLogin');
+    const erroLogin = document.getElementById('erroLogin');
+
+    formLogin.addEventListener('submit', function (e) {
+      e.preventDefault();
+      const user = document.getElementById('usuario').value.trim();
+      const senha = document.getElementById('senha').value;
+      if (user === 'master' && senha === '123mudar') {
+        localStorage.setItem('logado', 'sim');
+        document.getElementById('telaLogin').style.display = 'none';
+        document.getElementById('telaPrincipal').style.display = 'block';
+        carregarAcertos();
+      } else {
+        erroLogin.textContent = 'Usuário ou senha inválidos.';
+      }
+    });
   });
 
-  // Função para mostrar/ocultar senha
   function toggleSenha() {
     const senhaInput = document.getElementById('senha');
     senhaInput.type = senhaInput.type === 'password' ? 'text' : 'password';
   }
 
-  // Função para sair
-  function logout() {
-    localStorage.removeItem("logado");
-    location.reload();
-  }
-</script>
-
-  let despesas = [];
-
   function adicionarDespesa() {
     const desc = document.getElementById("descDespesa").value;
     const valor = parseFloat(document.getElementById("valorDespesa").value);
-
     if (!desc || isNaN(valor)) return;
-
     despesas.push({ descricao: desc, valor });
-    atualizarListaDespesas();
-    calcularSobra();
-
     document.getElementById("descDespesa").value = '';
     document.getElementById("valorDespesa").value = '';
+    atualizarListaDespesas();
+    calcularSobra();
   }
 
   function atualizarListaDespesas() {
     const ul = document.getElementById("listaDespesas");
-    ul.innerHTML = '';
+    ul.innerHTML = "";
     despesas.forEach((d, i) => {
       const li = document.createElement("li");
       li.innerHTML = `${d.descricao}: R$ ${d.valor.toFixed(2).replace('.', ',')} 
-        <button onclick="removerDespesa(${i})" style="margin-left:10px;color:red;">✖</button>`;
+        <button onclick="removerDespesa(${i})">❌</button>`;
       ul.appendChild(li);
     });
   }
@@ -202,52 +221,233 @@
     const comissao = parseFloat(document.getElementById("comissao").value) || 0;
     const totalDespesas = despesas.reduce((acc, d) => acc + d.valor, 0);
     const sobra = frete - comissao - totalDespesas;
-
     const sobraSpan = document.getElementById("sobra");
     sobraSpan.textContent = `R$ ${sobra.toFixed(2).replace('.', ',')}`;
     sobraSpan.style.color = sobra < 0 ? 'red' : 'green';
   }
 
+  // Atualizar sobra ao digitar
   document.getElementById("frete").addEventListener("input", calcularSobra);
   document.getElementById("comissao").addEventListener("input", calcularSobra);
+</script>
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+  // Configuração Firebase
+  const firebaseConfig = {
+    apiKey: "AIzaSyAdz_cTwg0N97wGIT4juTl1OXs3-HJY0X8",
+    authDomain: "montero-web.firebaseapp.com",
+    projectId: "montero-web",
+    storageBucket: "montero-web.appspot.com",
+    messagingSenderId: "673171025883",
+    appId: "1:673171025883:web:8e845ea1460792e54bc1fe"
+  };
 
-  function limparCampos() {
-    document.getElementById("data").value = '';
-    document.getElementById("motorista").value = '';
-    document.getElementById("caminhao").value = '';
-    document.getElementById("frete").value = '';
-    document.getElementById("comissao").value = '';
-    document.getElementById("observacao").value = '';
-    document.getElementById("formaPagamento").selectedIndex = 0;
-    despesas = [];
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+
+  function salvarAcerto() {
+    const acerto = {
+      data: document.getElementById("data").value,
+      motorista: document.getElementById("motorista").value,
+      caminhao: document.getElementById("caminhao").value,
+      frete: parseFloat(document.getElementById("frete").value),
+      comissao: parseFloat(document.getElementById("comissao").value),
+      formaPagamento: document.getElementById("formaPagamento").value,
+      observacao: document.getElementById("observacao").value,
+      despesas: despesas
+    };
+
+    if (editandoIndex >= 0) {
+      db.collection("acertos").doc(editandoIndex).update(acerto).then(() => {
+        limparCampos();
+        carregarAcertos();
+        editandoIndex = -1;
+      });
+    } else {
+      db.collection("acertos").add(acerto).then(() => {
+        limparCampos();
+        carregarAcertos();
+      });
+    }
+  }
+
+  function carregarAcertos() {
+    const tbody = document.getElementById("corpoTabelaAcertos");
+    tbody.innerHTML = "";
+    db.collection("acertos").orderBy("data", "desc").get().then(snapshot => {
+      snapshot.forEach(doc => {
+        const acerto = doc.data();
+        const despesasTotal = acerto.despesas.reduce((acc, d) => acc + d.valor, 0);
+        const sobra = acerto.frete - acerto.comissao - despesasTotal;
+        const tr = document.createElement("tr");
+
+        tr.innerHTML = `
+          <td>${acerto.data}</td>
+          <td>${acerto.motorista}</td>
+          <td>${acerto.caminhao}</td>
+          <td>R$ ${acerto.frete.toFixed(2)}</td>
+          <td>R$ ${acerto.comissao.toFixed(2)}</td>
+          <td style="color:${sobra < 0 ? 'red' : 'green'};">R$ ${sobra.toFixed(2)}</td>
+          <td>
+            <button onclick="editarAcerto('${doc.id}', ${JSON.stringify(acerto).replace(/"/g, '&quot;')})">✏️</button>
+            <button onclick="excluirAcerto('${doc.id}')" style="color:red;">🗑️</button>
+            <button onclick="gerarRecibo(${JSON.stringify(acerto).replace(/"/g, '&quot;')})">📄</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    });
+  }
+
+  function editarAcerto(id, acerto) {
+    editandoIndex = id;
+    document.getElementById("data").value = acerto.data;
+    document.getElementById("motorista").value = acerto.motorista;
+    document.getElementById("caminhao").value = acerto.caminhao;
+    document.getElementById("frete").value = acerto.frete;
+    document.getElementById("comissao").value = acerto.comissao;
+    document.getElementById("formaPagamento").value = acerto.formaPagamento;
+    document.getElementById("observacao").value = acerto.observacao;
+    despesas = acerto.despesas;
     atualizarListaDespesas();
     calcularSobra();
   }
 
-  function salvarAcerto() {
-    alert("⚙️ Em breve: salvando no Firebase...");
+  function excluirAcerto(id) {
+    if (confirm("Tem certeza que deseja excluir?")) {
+      db.collection("acertos").doc(id).delete().then(() => {
+        carregarAcertos();
+      });
+    }
+  }
+
+  function limparCampos() {
+    document.getElementById("formAcerto").reset();
+    despesas = [];
+    atualizarListaDespesas();
+    calcularSobra();
+    editandoIndex = -1;
+  }
+
+  function gerarRecibo(acerto) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    doc.setFontSize(14);
+    doc.text("Recibo de Pagamento - Montero Transportes", 20, 20);
+    doc.setFontSize(12);
+    doc.text(`Data: ${acerto.data}`, 20, 40);
+    doc.text(`Motorista: ${acerto.motorista}`, 20, 50);
+    doc.text(`Caminhão: ${acerto.caminhao}`, 20, 60);
+    doc.text(`Comissão: R$ ${acerto.comissao.toFixed(2)}`, 20, 70);
+    doc.text(`Forma de pagamento: ${acerto.formaPagamento}`, 20, 80);
+    doc.text(`Observação: ${acerto.observacao}`, 20, 90);
+
+    doc.text("Assinatura do motorista: ______________________", 20, 120);
+    doc.text("Assinatura do proprietário: ___________________", 20, 140);
+    doc.save(`recibo_${acerto.motorista}.pdf`);
   }
 </script>
-<!-- Firebase App (core) -->
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-<!-- Firebase Firestore -->
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
-
 <script>
-  // 🔧 COLE AQUI A CONFIGURAÇÃO DO FIREBASE QUE VOCÊ COPIOU
-  const firebaseConfig = {
-    apiKey: "SUA_API_KEY",
-    authDomain: "SEU_DOMINIO.firebaseapp.com",
-    projectId: "SEU_PROJECT_ID",
-    storageBucket: "SEU_BUCKET.appspot.com",
-    messagingSenderId: "SEU_SENDER_ID",
-    appId: "SUA_APP_ID"
-  };
+  function filtrarAcertos() {
+    const inicio = document.getElementById("filtroDataInicio").value;
+    const fim = document.getElementById("filtroDataFim").value;
+    const tbody = document.getElementById("corpoTabelaAcertos");
+    tbody.innerHTML = "";
 
-  // Inicializar Firebase
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore();
+    let totalDespesas = 0;
+    let totalSobra = 0;
+
+    db.collection("acertos").orderBy("data").get().then(snapshot => {
+      snapshot.forEach(doc => {
+        const acerto = doc.data();
+        const dataAcerto = acerto.data;
+
+        if ((!inicio || dataAcerto >= inicio) && (!fim || dataAcerto <= fim)) {
+          const despesasTotal = acerto.despesas.reduce((acc, d) => acc + d.valor, 0);
+          const sobra = acerto.frete - acerto.comissao - despesasTotal;
+
+          totalDespesas += despesasTotal;
+          totalSobra += sobra;
+
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${acerto.data}</td>
+            <td>${acerto.motorista}</td>
+            <td>${acerto.caminhao}</td>
+            <td>R$ ${acerto.frete.toFixed(2)}</td>
+            <td>R$ ${acerto.comissao.toFixed(2)}</td>
+            <td style="color:${sobra < 0 ? 'red' : 'green'};">R$ ${sobra.toFixed(2)}</td>
+            <td>
+              <button onclick="editarAcerto('${doc.id}', ${JSON.stringify(acerto).replace(/"/g, '&quot;')})">✏️</button>
+              <button onclick="excluirAcerto('${doc.id}')" style="color:red;">🗑️</button>
+              <button onclick="gerarRecibo(${JSON.stringify(acerto).replace(/"/g, '&quot;')})">📄</button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        }
+      });
+
+      const trTotais = document.createElement("tr");
+      trTotais.innerHTML = `
+        <td colspan="4"><strong>Totais:</strong></td>
+        <td><strong>Despesas: R$ ${totalDespesas.toFixed(2)}</strong></td>
+        <td><strong>Sobra: R$ ${totalSobra.toFixed(2)}</strong></td>
+        <td></td>
+      `;
+      tbody.appendChild(trTotais);
+    });
+  }
+
+  function gerarRelatorio() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    let y = 20;
+
+    doc.setFontSize(14);
+    doc.text("Relatório de Acertos - Montero Transportes", 20, y);
+    y += 10;
+
+    const inicio = document.getElementById("filtroDataInicio").value;
+    const fim = document.getElementById("filtroDataFim").value;
+
+    db.collection("acertos").orderBy("data").get().then(snapshot => {
+      let totalDespesas = 0;
+      let totalSobra = 0;
+
+      snapshot.forEach(docSnap => {
+        const acerto = docSnap.data();
+        const data = acerto.data;
+
+        if ((!inicio || data >= inicio) && (!fim || data <= fim)) {
+          const despesasTotal = acerto.despesas.reduce((acc, d) => acc + d.valor, 0);
+          const sobra = acerto.frete - acerto.comissao - despesasTotal;
+          totalDespesas += despesasTotal;
+          totalSobra += sobra;
+
+          doc.setFontSize(11);
+          doc.text(`📅 ${acerto.data} | 👤 ${acerto.motorista} | 🚛 ${acerto.caminhao}`, 20, y); y += 6;
+          doc.text(`Frete: R$ ${acerto.frete.toFixed(2)} | Comissão: R$ ${acerto.comissao.toFixed(2)} | Sobra: R$ ${sobra.toFixed(2)}`, 20, y); y += 6;
+          doc.text(`Despesas: ${acerto.despesas.map(d => `${d.descricao} (R$ ${d.valor.toFixed(2)})`).join(", ")}`, 20, y); y += 8;
+          doc.line(20, y, 190, y); y += 6;
+        }
+
+        if (y > 260) {
+          doc.addPage();
+          y = 20;
+        }
+      });
+
+      doc.setFontSize(12);
+      doc.text(`🔎 Período: ${inicio || "..."} até ${fim || "..."}`, 20, y + 10);
+      doc.text(`💸 Total de Despesas: R$ ${totalDespesas.toFixed(2)}`, 20, y + 20);
+      doc.text(`📈 Total de Sobra: R$ ${totalSobra.toFixed(2)}`, 20, y + 30);
+      doc.save("relatorio_acertos.pdf");
+    });
+  }
 </script>
-
 </body>
 </html>
