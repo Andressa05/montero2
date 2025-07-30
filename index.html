@@ -355,7 +355,7 @@
                                     <th class="py-3 px-6 text-left">Data</th>
                                     <th class="py-3 px-6 text-left">Vencimento</th>
                                     <th class="py-3 px-6 text-left">Descrição</th>
-                                    <th class="py-3 px-6 text-center">Pago</th>
+                                    <th class="py-3 px-6 text-center">Status</th> <!-- Changed from PAGO to Status -->
                                     <th class="py-3 px-6 text-center">Ações</th>
                                 </tr>
                             </thead>
@@ -400,6 +400,7 @@
             appId: "1:673171025883:web:8e845ea1460792e54bc1fe",
             measurementId: "G-TVDL4P5J6E"
         };
+        // Corrected assignment for initialAuthToken - ensure it's not referencing itself
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
         // Initialize Firebase
@@ -407,7 +408,7 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        // Fixed user ID for all data operations
+        // Fixed user ID for all data operations (used for logical grouping, not security path)
         const FIXED_USER_ID = 'master';
 
         let currentUserId = null;
@@ -437,6 +438,7 @@
         const acertoForm = document.getElementById('acerto-form');
         const acertoDataInput = document.getElementById('acerto-data');
         const motoristaInput = document.getElementById('motorista');
+        // Corrected assignment for caminhaoInput
         const caminhaoInput = document.getElementById('caminhao');
         const freteInput = document.getElementById('frete');
         const comissaoInput = document.getElementById('comissao');
@@ -452,6 +454,7 @@
         const filterAcertosButton = document.getElementById('filter-acertos-button');
         const generateAcertoReportButton = document.getElementById('generate-acerto-report-button');
         const totalComissaoSpan = document.getElementById('total-comissao');
+        // Corrected assignment for totalDespesasAcertosSpan
         const totalDespesasAcertosSpan = document.getElementById('total-despesas-acertos');
         const totalSobraSpan = document.getElementById('total-sobra');
         const acertosTableBody = document.getElementById('acertos-table-body');
@@ -537,8 +540,10 @@
         // --- Firebase Authentication ---
         onAuthStateChanged(auth, async (user) => {
             if (user) {
+                console.log("DEBUG: onAuthStateChanged: Usuário autenticado:", user.uid);
                 currentUserId = user.uid;
-                userIdDisplay.textContent = `ID do Usuário: ${currentUserId} (Dados fixos: ${FIXED_USER_ID})`;
+                // Display the actual authenticated user ID, and note the fixed logical ID for data
+                userIdDisplay.textContent = `ID do Usuário: ${currentUserId} (Dados agrupados sob: ${FIXED_USER_ID})`;
                 loginScreen.classList.add('hidden');
                 appScreen.classList.remove('hidden');
                 isAuthReady = true;
@@ -548,9 +553,9 @@
                     setupRealtimeListeners();
                 }, 100);
             } else {
-                console.log("DEBUG: Usuário desautenticado. Limpando dados e listeners.");
+                console.log("DEBUG: onAuthStateChanged: Usuário desautenticado.");
                 currentUserId = null;
-                isAuthReady = true;
+                isAuthReady = true; // Still ready, but no user logged in
                 loginScreen.classList.remove('hidden');
                 appScreen.classList.add('hidden');
                 if (unsubscribeAcertos) {
@@ -572,16 +577,19 @@
         // Initial sign-in attempt
         async function initializeAuth() {
             try {
-                if (initialAuthToken) {
+                // Check if initialAuthToken is truly available and not just undefined/null
+                if (initialAuthToken && initialAuthToken !== 'undefined' && initialAuthToken !== 'null') {
                     console.log("DEBUG: Tentando autenticar com token personalizado...");
                     await signInWithCustomToken(auth, initialAuthToken);
+                    console.log("DEBUG: Autenticação com token personalizado bem-sucedida.");
                 } else {
-                    console.log("DEBUG: Tentando autenticar anonimamente...");
+                    console.log("DEBUG: Token personalizado não disponível ou inválido. Tentando autenticar anonimamente...");
                     await signInAnonymously(auth);
+                    console.log("DEBUG: Autenticação anônima inicial bem-sucedida.");
                 }
             } catch (error) {
-                console.error("DEBUG: Erro na autenticação inicial:", error);
-                showModal("Erro na autenticação inicial. Tente novamente.");
+                console.error("DEBUG: Erro na autenticação inicial:", error.code, error.message); // Log detailed error
+                showModal(`Erro na autenticação inicial. Tente novamente. Detalhes: ${error.message}`);
             }
         }
 
@@ -592,15 +600,26 @@
             const password = passwordInput.value;
 
             if (username === 'master' && password === '123mudar') {
+                console.log("DEBUG: Credenciais locais válidas.");
                 loginError.classList.add('hidden');
                 if (!auth.currentUser) {
-                    console.log("DEBUG: Credenciais corretas. Autenticando anonimamente...");
+                    console.log("DEBUG: Tentando autenticação anônima via botão de login...");
                     try {
+                        // We sign in anonymously, and data is stored in a public collection
+                        // This allows any authenticated user (including anonymous) to access the "master" data.
                         await signInAnonymously(auth);
+                        console.log("DEBUG: Autenticação anônima via botão de login bem-sucedida.");
                     } catch (error) {
-                        console.error("DEBUG: Erro ao tentar signInAnonymously após login local:", error);
-                        showModal("Erro ao autenticar. Tente novamente.");
+                        console.error("DEBUG: Erro ao tentar signInAnonymously após login local:", error.code, error.message);
+                        showModal(`Erro ao autenticar. Tente novamente. Detalhes: ${error.message}`);
                     }
+                } else {
+                    console.log("DEBUG: Usuário já autenticado, prosseguindo para a tela principal.");
+                    loginScreen.classList.add('hidden');
+                    appScreen.classList.remove('hidden');
+                    isAuthReady = true; // Ensure this is set
+                    loadCompanyName();
+                    setupRealtimeListeners();
                 }
             } else {
                 loginError.classList.remove('hidden');
@@ -621,8 +640,8 @@
                 await signOut(auth);
                 showModal("Você foi desconectado com sucesso.");
             } catch (error) {
-                console.error("DEBUG: Erro ao fazer logout:", error);
-                showModal("Erro ao fazer logout. Tente novamente.");
+                console.error("DEBUG: Erro ao fazer logout:", error.code, error.message);
+                showModal(`Erro ao fazer logout. Tente novamente. Detalhes: ${error.message}`);
             }
         });
 
@@ -758,10 +777,16 @@
             addDespesaField();
             sobraValorSpan.textContent = 'R$ 0,00';
             expenseCount = 0;
-            saveAcertoButton.textContent = 'Salvar Acerto';
-            saveAcertoButton.querySelector('i').classList.remove('fa-sync-alt');
-            saveAcertoButton.querySelector('i').classList.add('fa-save');
-            delete saveAcertoButton.dataset.editId;
+            // Check if saveAcertoButton and its child (i) exist before manipulating
+            if (saveAcertoButton) {
+                saveAcertoButton.textContent = 'Salvar Acerto';
+                const icon = saveAcertoButton.querySelector('i');
+                if (icon) {
+                    icon.classList.remove('fa-sync-alt');
+                    icon.classList.add('fa-save');
+                }
+                delete saveAcertoButton.dataset.editId;
+            }
         }
 
         clearAcertoButton.addEventListener('click', clearAcertoForm);
@@ -816,13 +841,14 @@
             const editId = saveAcertoButton.dataset.editId;
 
             try {
-                const acertosCollectionRef = collection(db, `artifacts/${appId}/users/${FIXED_USER_ID}/acertos`);
-                const caixaCollectionRef = collection(db, `artifacts/${appId}/users/${FIXED_USER_ID}/caixa`);
+                // Modified to use public collection path
+                const acertosCollectionRef = collection(db, `artifacts/${appId}/public/data/acertos`);
+                const caixaCollectionRef = collection(db, `artifacts/${appId}/public/data/caixa`);
 
                 if (editId) {
                     console.log(`DEBUG: Iniciando atualização do acerto com ID: ${editId}`);
                     console.log("DEBUG: Payload para Firestore (atualização de acerto):", acertoData); // Log do payload
-                    const docRef = doc(db, `artifacts/${appId}/users/${FIXED_USER_ID}/acertos`, editId);
+                    const docRef = doc(db, `artifacts/${appId}/public/data/acertos`, editId);
                     await updateDoc(docRef, acertoData);
                     console.log("DEBUG: Acerto atualizado no Firestore:", editId);
 
@@ -846,7 +872,7 @@
                         descricao: `Frete da viagem - ${motorista} / ${caminhao}`,
                         acertoLinkedId: editId,
                         timestamp: new Date(),
-                        pago: false, // Default to false for automatically generated entries
+                        pago: true, // Default to true for automatically generated entries
                         isBoleto: false, // Default to false for automatically generated entries
                         vencimento: '' // Default to empty for automatically generated entries
                     });
@@ -885,7 +911,7 @@
                         descricao: `Frete da viagem - ${motorista} / ${caminhao}`,
                         acertoLinkedId: newAcertoId,
                         timestamp: new Date(),
-                        pago: false, // Default to false for automatically generated entries
+                        pago: true, // Default to true for automatically generated entries
                         isBoleto: false, // Default to false for automatically generated entries
                         vencimento: '' // Default to empty for automatically generated entries
                     });
@@ -905,7 +931,7 @@
                             vencimento: '' // Default to empty for automatically generated entries
                         });
                     }
-                    console.log("DEBUG: Lançamentos de caixa vinculados criados para novo acerto:", newAcertoId);
+                    console.log("DEBUG: Novos lançamentos de caixa vinculados criados para acerto:", newAcertoId);
                     showModal("Acerto salvo com sucesso!");
                 }
                 clearAcertoForm();
@@ -927,7 +953,8 @@
             }
             console.log("DEBUG: Configurando listener de Acertos para o usuário fixo:", FIXED_USER_ID);
 
-            const acertosCollectionRef = collection(db, `artifacts/${appId}/users/${FIXED_USER_ID}/acertos`);
+            // Modified to use public collection path
+            const acertosCollectionRef = collection(db, `artifacts/${appId}/public/data/acertos`);
             const q = query(acertosCollectionRef);
 
             unsubscribeAcertos = onSnapshot(q, (snapshot) => {
@@ -972,9 +999,9 @@
                     <td class="py-3 px-6 text-left whitespace-nowrap">${formatDateToDDMMYYYY(acerto.data)}</td>
                     <td class="py-3 px-6 text-left">${acerto.motorista}</td>
                     <td class="py-3 px-6 text-left">${acerto.caminhao}</td>
-                    <td class="py-3 px-6 text-left">${acerto.frete.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
-                    <td class="py-3 px-6 text-left">${acerto.comissao.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
-                    <td class="py-3 px-6 text-left">${acerto.sobra.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+                    <td class="py-3 px-6 text-left">${(acerto.frete ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+                    <td class="py-3 px-6 text-left">${(acerto.comissao ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+                    <td class="py-3 px-6 text-left">${(acerto.sobra ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
                     <td class="py-3 px-6 text-center whitespace-nowrap">
                         <button class="edit-acerto-button text-blue-500 hover:text-blue-700 mr-2" data-id="${acerto.id}" title="Editar"><i class="fas fa-edit"></i></button>
                         <button class="delete-acerto-button text-red-500 hover:text-red-700 mr-2" data-id="${acerto.id}" title="Excluir"><i class="fas fa-trash"></i></button>
@@ -1049,41 +1076,56 @@
 
         async function editAcerto(id) {
             if (!isAuthReady) return;
-
             try {
-                const docRef = doc(db, `artifacts/${appId}/users/${FIXED_USER_ID}/acertos`, id);
+                // Modified to use public collection path
+                const docRef = doc(db, `artifacts/${appId}/public/data/acertos`, id);
                 const docSnap = await getDoc(docRef);
 
-                if (docSnap.exists()) {
-                    const acerto = docSnap.data();
-                    acertoDataInput.value = acerto.data;
-                    motoristaInput.value = acerto.motorista;
-                    caminhaoInput.value = acerto.caminhao;
-                    freteInput.value = acerto.frete.toFixed(2).replace('.', ',');
-                    comissaoInput.value = acerto.comissao.toFixed(2).replace('.', ',');
-                    formaPagamentoSelect.value = acerto.formaPagamento;
-                    observacoesAcertoTextarea.value = acerto.observacoes;
-
-                    despesasContainer.innerHTML = '';
-                    acerto.despesas.forEach(d => addDespesaField(d.descricao, d.valor.toFixed(2).replace('.', ',')));
-                    if (acerto.despesas.length === 0) {
-                        addDespesaField();
-                    }
-                    calculateSobra();
-
-                    saveAcertoButton.textContent = 'Atualizar Acerto';
-                    saveAcertoButton.querySelector('i').classList.remove('fa-save');
-                    saveAcertoButton.querySelector('i').classList.add('fa-sync-alt');
-                    saveAcertoButton.dataset.editId = id;
-
-                    acertoForm.scrollIntoView({ behavior: 'smooth' });
-                    showModal("Acerto carregado para edição.");
-                } else {
+                if (!docSnap.exists()) {
                     showModal("Acerto não encontrado.");
+                    return;
                 }
+
+                const acerto = docSnap.data();
+                console.log("DEBUG: Acerto carregado =>", acerto);
+
+                acertoDataInput.value = acerto.data || '';
+                motoristaInput.value = acerto.motorista || '';
+                caminhaoInput.value = acerto.caminhao || '';
+                // Ensure values are numbers before toFixed and replace
+                freteInput.value = Number(acerto.frete ?? 0).toFixed(2).replace('.', ',');
+                comissaoInput.value = Number(acerto.comissao ?? 0).toFixed(2).replace('.', ',');
+                formaPagamentoSelect.value = acerto.formaPagamento || 'Dinheiro';
+                observacoesAcertoTextarea.value = acerto.observacoes || '';
+
+                despesasContainer.innerHTML = '';
+                if (Array.isArray(acerto.despesas) && acerto.despesas.length > 0) {
+                    acerto.despesas.forEach(d => {
+                        // Ensure values are numbers before toFixed and replace
+                        addDespesaField(d.descricao || '', Number(d.valor ?? 0).toFixed(2).replace('.', ','));
+                    });
+                } else {
+                    addDespesaField(); // Add at least one empty expense field if none exist
+                }
+                
+                calculateSobra();
+
+                // Safer manipulation of saveAcertoButton's icon
+                if (saveAcertoButton) {
+                    saveAcertoButton.textContent = 'Atualizar Acerto';
+                    const icon = saveAcertoButton.querySelector('i');
+                    if (icon) {
+                        icon.classList.remove('fa-save');
+                        icon.classList.add('fa-sync-alt');
+                    }
+                    saveAcertoButton.dataset.editId = id;
+                }
+
+                acertoForm.scrollIntoView({ behavior: 'smooth' });
+                showModal("Acerto carregado para edição.");
             } catch (error) {
-                console.error("DEBUG: Erro ao carregar acerto para edição: ", error.message, error); // Log detailed error
-                showModal("Erro ao carregar acerto para edição.");
+                console.error("DEBUG: Erro ao carregar acerto:", error.message, error); // Log detailed error
+                showModal("Erro ao carregar acerto para edição. Detalhes no console.");
             }
         }
 
@@ -1092,18 +1134,20 @@
 
             try {
                 console.log(`DEBUG: Iniciando exclusão do acerto com ID: ${id} e seus lançamentos de caixa vinculados.`);
-                const caixaCollectionRef = collection(db, `artifacts/${appId}/users/${FIXED_USER_ID}/caixa`);
+                // Modified to use public collection path
+                const caixaCollectionRef = collection(db, `artifacts/${appId}/public/data/caixa`);
                 const linkedCaixaQuery = query(caixaCollectionRef, where('acertoLinkedId', '==', id));
                 const linkedCaixaSnapshot = await getDocs(linkedCaixaQuery);
-                const deleteCaixaPromises = [];
+                const deleteCaixaPromises = []; 
                 linkedCaixaSnapshot.forEach(doc => {
                     console.log(`DEBUG: Excluindo lançamento de caixa ID: ${doc.id}`);
-                    deletePromises.push(deleteDoc(doc.ref));
+                    deleteCaixaPromises.push(deleteDoc(doc.ref)); 
                 });
                 await Promise.all(deleteCaixaPromises);
                 console.log("DEBUG: Lançamentos de caixa vinculados excluídos para acerto:", id);
 
-                const acertoDocRef = doc(db, `artifacts/${appId}/users/${FIXED_USER_ID}/acertos`, id);
+                // Modified to use public collection path
+                const acertoDocRef = doc(db, `artifacts/${appId}/public/data/acertos`, id);
                 await deleteDoc(acertoDocRef);
                 console.log("DEBUG: Acerto excluído do Firestore:", id);
                 showModal("Acerto e lançamentos de caixa relacionados excluídos com sucesso!");
@@ -1118,7 +1162,8 @@
             if (!isAuthReady) return;
 
             try {
-                const docRef = doc(db, `artifacts/${appId}/users/${FIXED_USER_ID}/acertos`, id);
+                // Modified to use public collection path
+                const docRef = doc(db, `artifacts/${appId}/public/data/acertos`, id);
                 const docSnap = await getDoc(docRef);
 
                 if (docSnap.exists()) {
@@ -1127,32 +1172,32 @@
                         <p><strong>Data:</strong> ${formatDateToDDMMYYYY(acerto.data)}</p>
                         <p><strong>Motorista:</strong> ${acerto.motorista}</p>
                         <p><strong>Caminhão:</strong> ${acerto.caminhao}</p>
-                        <p><strong>Frete:</strong> ${acerto.frete.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
-                        <p><strong>Comissão:</strong> ${acerto.comissao.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                        <p><strong>Frete:</strong> ${(acerto.frete ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                        <p><strong>Comissão:</strong> ${(acerto.comissao ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
                         <p><strong>Forma de Pagamento:</strong> ${acerto.formaPagamento}</p>
                         <p><strong>Observações:</strong> ${acerto.observacoes || 'N/A'}</p>
                         <p><strong>Despesas:</strong></p>
                         <ul>
                     `;
-                    if (acerto.despesas && acerto.despesas.length > 0) {
+                    if (Array.isArray(acerto.despesas) && acerto.despesas.length > 0) { // Robustness
                         acerto.despesas.forEach(d => {
-                            details += `<li>- ${d.descricao}: ${d.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</li>`;
+                            details += `<li>- ${d.descricao}: ${(d.valor ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</li>`; // Robustness
                         });
                     } else {
                         details += `<li>Nenhuma despesa registrada.</li>`;
                     }
                     details += `
                         </ul>
-                        <p><strong>Total Despesas:</strong> ${acerto.totalDespesas.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
-                        <p><strong>Sobra:</strong> <span class="text-green-600">${acerto.sobra.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span></p>
+                        <p><strong>Total Despesas:</strong> ${(acerto.totalDespesas ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                        <p><strong>Sobra:</strong> <span class="text-green-600">${(acerto.sobra ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span></p>
                     `;
                     showModal(details);
                 } else {
                     showModal("Acerto não encontrado.");
                 }
             } catch (error) {
-                console.error("DEBUG: Erro ao ver detalhes do acerto: ", error.message, error); // Log detailed error
-                showModal("Erro ao ver detalhes do acerto.");
+                    console.error("DEBUG: Erro ao ver detalhes do acerto: ", error.message, error); // Log detailed error
+                    showModal("Erro ao ver detalhes do acerto.");
             }
         }
 
@@ -1160,7 +1205,8 @@
             if (!isAuthReady) return;
 
             try {
-                const docRef = doc(db, `artifacts/${appId}/users/${FIXED_USER_ID}/acertos`, id);
+                // Modified to use public collection path
+                const docRef = doc(db, `artifacts/${appId}/public/data/acertos`, id);
                 const docSnap = await getDoc(docRef);
 
                 if (docSnap.exists()) {
@@ -1185,9 +1231,9 @@
                     y += lineHeight;
                     doc.text(`Caminhão: ${acerto.caminhao}`, margin, y);
                     y += lineHeight;
-                    doc.text(`Valor do Frete: ${acerto.frete.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`, margin, y);
+                    doc.text(`Valor do Frete: ${(acerto.frete ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`, margin, y); // Robustness
                     y += lineHeight;
-                    doc.text(`Valor da Comissão: ${acerto.comissao.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`, margin, y);
+                    doc.text(`Valor da Comissão: ${(acerto.comissao ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`, margin, y); // Robustness
                     y += lineHeight;
                     doc.text(`Forma de Pagamento: ${acerto.formaPagamento}`, margin, y);
                     y += lineHeight;
@@ -1196,9 +1242,9 @@
 
                     doc.text("Despesas:", margin, y);
                     y += lineHeight;
-                    if (acerto.despesas && acerto.despesas.length > 0) {
+                    if (Array.isArray(acerto.despesas) && acerto.despesas.length > 0) { // Robustness
                         acerto.despesas.forEach(d => {
-                            doc.text(`- ${d.descricao}: ${d.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`, margin + 5, y);
+                            doc.text(`- ${d.descricao}: ${(d.valor ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`, margin + 5, y); // Robustness
                             y += lineHeight;
                         });
                     } else {
@@ -1207,9 +1253,9 @@
                     }
                     y += lineHeight;
 
-                    doc.text(`Total de Despesas: ${acerto.totalDespesas.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`, margin, y);
+                    doc.text(`Total de Despesas: ${(acerto.totalDespesas ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`, margin, y); // Robustness
                     y += lineHeight;
-                    doc.text(`Sobra: ${acerto.sobra.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`, margin, y);
+                    doc.text(`Sobra: ${(acerto.sobra ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`, margin, y); // Robustness
                     y += lineHeight * 4;
 
                     doc.text("___________________________", 105, y, null, null, "center");
@@ -1261,10 +1307,16 @@
             caixaObservacoesTextarea.value = '';
             document.getElementById('caixa-is-boleto').checked = false; // Clear the checkbox
             vencimentoField.classList.add('hidden');
-            saveCaixaButton.textContent = 'Salvar Lançamento';
-            saveCaixaButton.querySelector('i').classList.remove('fa-sync-alt');
-            saveCaixaButton.querySelector('i').classList.add('fa-save');
-            delete saveCaixaButton.dataset.editId;
+            // Safer manipulation of saveCaixaButton's icon
+            if (saveCaixaButton) {
+                saveCaixaButton.textContent = 'Salvar Lançamento';
+                const icon = saveCaixaButton.querySelector('i');
+                if (icon) {
+                    icon.classList.remove('fa-sync-alt');
+                    icon.classList.add('fa-save');
+                }
+                delete saveCaixaButton.dataset.editId;
+            }
         }
 
         clearCaixaButton.addEventListener('click', clearCaixaForm);
@@ -1305,21 +1357,23 @@
                 observacoes: observacoes,
                 vencimento: vencimento,
                 isBoleto: isBoleto, // Save the boolean state
-                pago: false, // Default to not paid for new entries, will be overwritten for updates
+                pago: (tipo === 'entrada') ? true : false, // Default to true for 'entrada', false for 'saida'
                 timestamp: new Date()
             };
 
             const editId = saveCaixaButton.dataset.editId;
 
             try {
-                const caixaCollectionRef = collection(db, `artifacts/${appId}/users/${FIXED_USER_ID}/caixa`);
+                // Modified to use public collection path
+                const caixaCollectionRef = collection(db, `artifacts/${appId}/public/data/caixa`);
 
                 if (editId) {
                     console.log(`DEBUG: Iniciando atualização do lançamento de caixa com ID: ${editId}`);
-                    const docRef = doc(db, `artifacts/${appId}/users/${FIXED_USER_ID}/caixa`, editId);
+                    const docRef = doc(db, `artifacts/${appId}/public/data/caixa`, editId);
                     const existingDoc = await getDoc(docRef);
                     if (existingDoc.exists()) {
-                        caixaEntry.pago = existingDoc.data().pago ?? false; // Preserve 'pago' status, using ?? for robustness
+                        // Preserve 'pago' status for updates, unless it's an 'entrada' being edited, then ensure it's true
+                        caixaEntry.pago = (tipo === 'entrada') ? true : (existingDoc.data().pago ?? false);
                     }
                     console.log("DEBUG: Payload para Firestore (atualização de caixa):", caixaEntry); // Log do payload
                     await updateDoc(docRef, caixaEntry);
@@ -1350,7 +1404,8 @@
             }
             console.log("DEBUG: Configurando listener de Caixa para o usuário fixo:", FIXED_USER_ID);
 
-            const caixaCollectionRef = collection(db, `artifacts/${appId}/users/${FIXED_USER_ID}/caixa`);
+            // Modified to use public collection path
+            const caixaCollectionRef = collection(db, `artifacts/${appId}/public/data/caixa`);
             let q = query(caixaCollectionRef);
 
             unsubscribeCaixa = onSnapshot(q, (snapshot) => {
@@ -1365,8 +1420,8 @@
                 calculateCaixaTotals(caixaEntries);
                 checkBoletosVencendoHoje(caixaEntries);
             }, (error) => {
-                console.error("DEBUG: Erro ao carregar lançamentos do caixa: ", error.message, error); // Log detailed error
-                showModal("Erro ao carregar lançamentos do caixa.");
+                console.error("DEBUG: Erro ao carregar lançamentos do caixa:", error); // Log the full error object for more details
+                showModal("Erro ao carregar lançamentos do caixa. Por favor, verifique o console para mais detalhes.");
             });
         }
 
@@ -1427,30 +1482,38 @@
                 const row = caixaTableBody.insertRow();
                 const isPaid = entry.pago === true;
                 row.classList.add('border-b', 'border-gray-200', 'hover:bg-gray-100');
-                if (isPaid) {
+                if (isPaid && entry.tipo === 'saida') { // Only apply strikethrough for paid 'saida' entries
                     row.classList.add('paid-entry');
                 }
 
                 const valorClass = entry.tipo === 'entrada' ? 'text-green-600' : 'text-red-600';
-                // Only show "Marcar como Pago" button if it's a 'saida' entry and not already paid
-                const paidButton = (entry.tipo === 'saida' && !isPaid) ?
-                    `<button class="mark-paid-button bg-purple-500 hover:bg-purple-600 text-white font-bold py-1 px-3 rounded-lg text-xs ml-2" data-id="${entry.id}" title="Marcar como Pago"><i class="fas fa-check"></i> Pago</button>` : '';
                 
-                const paidStatus = isPaid ? '<span class="text-green-500"><i class="fas fa-check-circle"></i> Sim</span>' : '<span class="text-red-500"><i class="fas fa-times-circle"></i> Não</span>';
+                let statusText;
+                let actionButtons = '';
+
+                if (entry.tipo === 'entrada') {
+                    statusText = isPaid ? '<span class="text-green-500"><i class="fas fa-check-circle"></i> Recebido</span>' : '<span class="text-red-500"><i class="fas fa-times-circle"></i> Pendente</span>';
+                    // No "Mark as Paid" button for income
+                } else { // tipo === 'saida'
+                    statusText = isPaid ? '<span class="text-green-500"><i class="fas fa-check-circle"></i> Pago</span>' : '<span class="text-red-500"><i class="fas fa-times-circle"></i> Não Pago</span>';
+                    if (!isPaid) {
+                        actionButtons += `<button class="mark-paid-button bg-purple-500 hover:bg-purple-600 text-white font-bold py-1 px-3 rounded-lg text-xs ml-2" data-id="${entry.id}" title="Marcar como Pago"><i class="fas fa-check"></i> Pago</button>`;
+                    }
+                }
 
 
                 row.innerHTML = `
                     <td class="py-3 px-6 text-left">${entry.tipo === 'entrada' ? 'Entrada' : 'Saída'}</td>
-                    <td class="py-3 px-6 text-left ${valorClass}">${entry.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+                    <td class="py-3 px-6 text-left ${valorClass}">${(entry.valor ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
                     <td class="py-3 px-6 text-left">${entry.categoria}</td>
                     <td class="py-3 px-6 text-left">${formatDateToDDMMYYYY(entry.data)}</td>
                     <td class="py-3 px-6 text-left">${entry.vencimento ? formatDateToDDMMYYYY(entry.vencimento) : 'N/A'}</td>
                     <td class="py-3 px-6 text-left">${entry.descricao || 'N/A'}</td>
-                    <td class="py-3 px-6 text-center">${paidStatus}</td>
+                    <td class="py-3 px-6 text-center">${statusText}</td>
                     <td class="py-3 px-6 text-center whitespace-nowrap">
                         <button class="edit-caixa-button text-blue-500 hover:text-blue-700 mr-2" data-id="${entry.id}" title="Editar"><i class="fas fa-edit"></i></button>
                         <button class="delete-caixa-button text-red-500 hover:text-red-700" data-id="${entry.id}" title="Excluir"><i class="fas fa-trash"></i></button>
-                        ${paidButton}
+                        ${actionButtons}
                     </td>
                 `;
             });
@@ -1557,7 +1620,8 @@
             }
 
             try {
-                const acertosCollectionRef = collection(db, `artifacts/${appId}/users/${FIXED_USER_ID}/acertos`);
+                // Modified to use public collection path
+                const acertosCollectionRef = collection(db, `artifacts/${appId}/public/data/acertos`);
                 let q = query(acertosCollectionRef);
 
                 const filterStartDate = filterAcertoDataInicialInput.value;
@@ -1626,9 +1690,9 @@
                     formatDateToDDMMYYYY(acerto.data),
                     acerto.motorista,
                     acerto.caminhao,
-                    acerto.frete.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
-                    acerto.comissao.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
-                    acerto.sobra.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+                    (acerto.frete ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), // Robustness
+                    (acerto.comissao ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), // Robustness
+                    (acerto.sobra ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) // Robustness
                 ]);
                 console.log("DEBUG: Dados para a tabela do relatório:", dataForTable);
 
@@ -1659,44 +1723,57 @@
         });
 
         async function editCaixaEntry(id) {
+            console.log("DEBUG: Entrando em editCaixaEntry para ID:", id);
             if (!isAuthReady) return;
 
             try {
-                const docRef = doc(db, `artifacts/${appId}/users/${FIXED_USER_ID}/caixa`, id);
+                // Modified to use public collection path
+                const docRef = doc(db, `artifacts/${appId}/public/data/caixa`, id);
                 const docSnap = await getDoc(docRef);
 
-                if (docSnap.exists()) {
-                    const entry = docSnap.data();
-                    caixaTipoSelect.value = entry.tipo;
-                    caixaValorInput.value = entry.valor.toFixed(2).replace('.', ',');
-                    caixaCategoriaInput.value = entry.categoria;
-                    caixaDataInput.value = entry.data;
-                    caixaDescricaoTextarea.value = entry.descricao;
-                    caixaObservacoesTextarea.value = entry.observacoes;
-                    document.getElementById('caixa-is-boleto').checked = entry.isBoleto ?? false; // Set checkbox state, using ??
-                    
-                    // Re-evaluate visibility of vencimento field based on type and isBoleto
-                    if (entry.tipo === 'saida' && (entry.isBoleto ?? false)) { // Use ?? for isBoleto check here too
-                        vencimentoField.classList.remove('hidden');
-                        caixaVencimentoInput.value = entry.vencimento || '';
-                    } else {
-                        vencimentoField.classList.add('hidden');
-                        caixaVencimentoInput.value = '';
-                    }
-
-                    saveCaixaButton.textContent = 'Atualizar Lançamento';
-                    saveCaixaButton.querySelector('i').classList.remove('fa-save');
-                    saveCaixaButton.querySelector('i').classList.add('fa-sync-alt');
-                    saveCaixaButton.dataset.editId = id;
-
-                    caixaForm.scrollIntoView({ behavior: 'smooth' });
-                    showModal("Lançamento carregado para edição.");
-                } else {
+                if (!docSnap.exists()) {
                     showModal("Lançamento não encontrado.");
+                    return;
                 }
+
+                const entry = docSnap.data();
+                console.log("DEBUG: Lançamento de caixa carregado =>", entry);
+                console.log("DEBUG: saveCaixaButton =>", saveCaixaButton);
+
+                caixaTipoSelect.value = entry.tipo || 'entrada';
+                // Ensure values are numbers before toFixed and replace
+                caixaValorInput.value = Number(entry.valor ?? 0).toFixed(2).replace('.', ','); 
+                caixaCategoriaInput.value = entry.categoria || '';
+                caixaDataInput.value = entry.data || '';
+                caixaDescricaoTextarea.value = entry.descricao || '';
+                caixaObservacoesTextarea.value = entry.observacoes || '';
+                document.getElementById('caixa-is-boleto').checked = entry.isBoleto ?? false; // Set checkbox state, using ??
+                
+                // Re-evaluate visibility of vencimento field based on type and isBoleto
+                if (entry.tipo === 'saida' && (entry.isBoleto ?? false)) { // Use ?? for isBoleto check here too
+                    vencimentoField.classList.remove('hidden');
+                    caixaVencimentoInput.value = entry.vencimento || '';
+                } else {
+                    vencimentoField.classList.add('hidden');
+                    caixaVencimentoInput.value = '';
+                }
+
+                // Safer manipulation of saveCaixaButton's icon
+                if (saveCaixaButton) {
+                    saveCaixaButton.textContent = 'Atualizar Lançamento';
+                    const icon = saveCaixaButton.querySelector('i');
+                    if (icon) {
+                        icon.classList.remove('fa-save');
+                        icon.classList.add('fa-sync-alt');
+                    }
+                    saveCaixaButton.dataset.editId = id;
+                }
+
+                caixaForm.scrollIntoView({ behavior: 'smooth' });
+                showModal("Lançamento carregado para edição.");
             } catch (error) {
                 console.error("DEBUG: Erro ao carregar lançamento para edição: ", error.message, error); // Log detailed error
-                showModal("Erro ao carregar lançamento para edição.");
+                showModal("Erro ao carregar lançamento para edição. Detalhes no console.");
             }
         }
 
@@ -1704,7 +1781,8 @@
             if (!isAuthReady) return;
 
             try {
-                const docRef = doc(db, `artifacts/${appId}/users/${FIXED_USER_ID}/caixa`, id);
+                // Modified to use public collection path
+                const docRef = doc(db, `artifacts/${appId}/public/data/caixa`, id);
                 await updateDoc(docRef, {
                     pago: true,
                     dataPagamento: new Date().toISOString().split('T')[0] // Store payment date
@@ -1720,7 +1798,8 @@
             if (!isAuthReady) return;
 
             try {
-                const docRef = doc(db, `artifacts/${appId}/users/${FIXED_USER_ID}/caixa`, id);
+                // Modified to use public collection path
+                const docRef = doc(db, `artifacts/${appId}/public/data/caixa`, id);
                 await deleteDoc(docRef);
                 showModal("Lançamento excluído com sucesso!");
             } catch (error) {
@@ -1737,7 +1816,8 @@
             }
 
             try {
-                const caixaCollectionRef = collection(db, `artifacts/${appId}/users/${FIXED_USER_ID}/caixa`);
+                // Modified to use public collection path
+                const caixaCollectionRef = collection(db, `artifacts/${appId}/public/data/caixa`);
                 let q = query(caixaCollectionRef);
 
                 const filterType = filterCaixaTipoSelect.value;
@@ -1830,17 +1910,25 @@
                 y += lineHeight * 2;
 
                 const headers = [
-                    "Tipo", "Valor", "Categoria", "Data", "Vencimento", "Descrição", "Pago"
+                    "Tipo", "Valor", "Categoria", "Data", "Vencimento", "Descrição", "Status"
                 ];
-                const dataForTable = filteredCaixa.map(entry => [
-                    entry.tipo === 'entrada' ? 'Entrada' : 'Saída',
-                    entry.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
-                    entry.categoria,
-                    formatDateToDDMMYYYY(entry.data),
-                    formatDateToDDMMYYYY(entry.vencimento),
-                    entry.descricao || 'N/A',
-                    entry.pago ? 'Sim' : 'Não'
-                ]);
+                const dataForTable = filteredCaixa.map(entry => {
+                    let statusForReport;
+                    if (entry.tipo === 'entrada') {
+                        statusForReport = entry.pago ? 'Recebido' : 'Pendente';
+                    } else { // tipo === 'saida'
+                        statusForReport = entry.pago ? 'Pago' : 'Não Pago';
+                    }
+                    return [
+                        entry.tipo === 'entrada' ? 'Entrada' : 'Saída',
+                        (entry.valor ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), // Robustness
+                        entry.categoria,
+                        formatDateToDDMMYYYY(entry.data),
+                        formatDateToDDMMYYYY(entry.vencimento),
+                        entry.descricao || 'N/A',
+                        statusForReport
+                    ];
+                });
                 console.log("DEBUG: Dados para a tabela do relatório de caixa:", dataForTable);
 
                 doc.autoTable({
@@ -1903,7 +1991,7 @@
             if (boletosVencendo.length > 0) {
                 let message = '';
                 boletosVencendo.forEach((boleto, index) => {
-                    message += `"${boleto.descricao || 'Boleto sem descrição'}" (R$ ${boleto.valor.toFixed(2).replace('.', ',')})`;
+                    message += `"${boleto.descricao || 'Boleto sem descrição'}" (R$ ${(boleto.valor ?? 0).toFixed(2).replace('.', ',')})`; // Robustness
                     if (index < boletosVencendo.length - 1) {
                         message += '; ';
                     }
