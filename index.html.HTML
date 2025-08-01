@@ -297,7 +297,7 @@
                             <label for="caixa-tipo" class="block text-gray-700 text-sm font-bold mb-2">Tipo:</label>
                             <select id="caixa-tipo" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
                                 <option value="entrada">Entrada</option>
-                                <option value="saida">Saída</option>
+                                <option value="saida" selected>Saída</option> <!-- Default to Saída -->
                             </select>
                         </div>
                         <div>
@@ -333,8 +333,8 @@
                             <input type="number" id="caixa-num-parcelas" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" value="1" min="1">
                         </div>
                         <div class="col-span-1 md:col-span-2">
-                            <label for="caixa-intervalo-parcelas" class="block text-gray-700 text-sm font-bold mb-2">Intervalo entre Parcelas (dias):</label>
-                            <input type="number" id="caixa-intervalo-parcelas" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" value="30" min="1">
+                            <label for="caixa-intervalo-parcelas" class="block text-gray-700 text-sm font-bold mb-2">Intervalo entre Parcelas (ex: "30 dias", "1 mês"):</label>
+                            <input type="text" id="caixa-intervalo-parcelas" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="Deixe em branco para mensal">
                         </div>
                         <div class="md:col-span-2">
                             <label for="caixa-descricao" class="block text-gray-700 text-sm font-bold mb-2">Descrição:</label>
@@ -389,8 +389,8 @@
 
                     <div class="mb-4">
                         <p class="text-md font-bold text-gray-800">Total Entradas: <span id="total-entradas" class="text-green-600">R$ 0,00</span></p>
-                        <p class="text-md font-bold text-gray-800">Total Saídas: <span id="total-saidas" class="text-red-600">R$ 0,00</span></p>
-                        <p class="text-lg font-bold text-gray-800">Saldo Atual: <span id="total-saldo" class="text-blue-600">R$ 0,00</span></p>
+                        <p class="text-md font-bold text-gray-800">Total Saídas: <span id="total-saidas" class="text-blue-600">R$ 0,00</span></p>
+                        <p class="text-lg font-bold text-gray-800">Saldo Atual: <span id="total-saldo" class="text-red-600">R$ 0,00</span></p>
                     </div>
 
                     <div class="overflow-x-auto">
@@ -541,7 +541,7 @@
 
         // Variáveis de estado da aplicação
         let currentUserId = null;
-        let isAuthReady = false;
+        let isAuthReady = false; // Indica se o estado de autenticação do Firebase foi determinado
         let unsubscribeAcertos = null;
         let unsubscribeCaixa = null;
         let unsubscribeTrucks = null;
@@ -613,7 +613,7 @@
         const apresentacaoChequeField = document.getElementById('apresentacao-cheque-field');
         const caixaDiasApresentacaoChequeInput = document.getElementById('caixa-dias-apresentacao-cheque');
         const caixaNumParcelasInput = document.getElementById('caixa-num-parcelas');
-        const caixaIntervaloParcelasInput = document.getElementById('caixa-intervalo-parcelas');
+        const caixaIntervaloParcelasInput = document.getElementById('caixa-intervalo-parcelas'); // Changed to text type
         const caixaDescricaoTextarea = document.getElementById('caixa-descricao');
         const caixaObservacoesTextarea = document.getElementById('caixa-observacoes');
         const saveCaixaButton = document.getElementById('save-caixa-button');
@@ -709,6 +709,7 @@
         /**
          * Listener de mudança de estado de autenticação do Firebase.
          * Gerencia a visibilidade das telas de login e aplicação.
+         * É a única fonte de verdade para o estado 'isAuthReady'.
          */
         onAuthStateChanged(auth, async (user) => {
             console.log("DEBUG: onAuthStateChanged callback triggered. User object:", user);
@@ -716,32 +717,24 @@
                 console.log("DEBUG: onAuthStateChanged: User is authenticated. UID:", user.uid);
                 currentUserId = user.uid;
                 userIdDisplay.textContent = `ID do Usuário: ${currentUserId} (Dados agrupados sob: ${FIXED_USER_ID})`;
-                loginScreen.classList.add('hidden');
-                appScreen.classList.remove('hidden');
-                isAuthReady = true;
+                isAuthReady = true; // O Firebase está autenticado
                 loadCompanyName();
-                // Mostra a aba "Cadastro de Caminhões" apenas para o usuário 'master'
-                if (usernameInput.value === 'master') {
-                    tabCadastroCaminhoes.classList.remove('hidden');
-                } else {
-                    tabCadastroCaminhoes.classList.add('hidden');
-                }
-                console.log("DEBUG: Auth ready. Setting up real-time listeners in 100ms...");
-                setTimeout(() => {
-                    setupRealtimeListeners();
-                }, 100);
+                // A visibilidade da aba de caminhões será controlada após o login local do 'master'
+                // para evitar que apareça antes do usuário ter se autenticado localmente.
+                console.log("DEBUG: Auth ready. Setting up real-time listeners...");
+                setupRealtimeListeners(); // Chama os listeners uma vez que o Firebase está autenticado
             } else {
                 console.log("DEBUG: onAuthStateChanged: User is NOT authenticated (null user).");
                 currentUserId = null;
-                isAuthReady = true; // Still ready to attempt authentication, but no user logged in
+                isAuthReady = true; // O estado de autenticação do Firebase é conhecido (não autenticado)
                 loginScreen.classList.remove('hidden');
                 appScreen.classList.add('hidden');
-                tabCadastroCaminhoes.classList.add('hidden');
-                // Unsubscribe from all real-time listeners to prevent memory leaks
+                tabCadastroCaminhoes.classList.add('hidden'); // Esconde a aba de caminhões se não estiver logado
+                // Cancela todos os listeners em tempo real para evitar vazamentos de memória
                 if (unsubscribeAcertos) { unsubscribeAcertos(); unsubscribeAcertos = null; console.log("DEBUG: Unsubscribed from Acertos listener."); }
                 if (unsubscribeCaixa) { unsubscribeCaixa(); unsubscribeCaixa = null; console.log("DEBUG: Unsubscribed from Caixa listener."); }
                 if (unsubscribeTrucks) { unsubscribeTrucks(); unsubscribeTrucks = null; console.log("DEBUG: Unsubscribed from Caminhões listener."); }
-                // Clear tables on logout
+                // Limpa as tabelas ao fazer logout
                 acertosTableBody.innerHTML = '';
                 caixaTableBody.innerHTML = '';
                 trucksTableBody.innerHTML = '';
@@ -750,8 +743,8 @@
         });
 
         /**
-         * Tenta autenticar o usuário ao iniciar a aplicação.
-         * Prioriza o token personalizado, caso contrário, tenta autenticação anônima.
+         * Tenta autenticar o usuário ao iniciar a aplicação com o token personalizado.
+         * Se não houver token ou se a autenticação falhar, não tenta login anônimo.
          */
         async function initialAuthAttempt() {
             console.log("DEBUG: initialAuthAttempt() called.");
@@ -764,53 +757,52 @@
                     await signInWithCustomToken(auth, initialAuthToken);
                     console.log("DEBUG: Custom token sign-in successful.");
                 } else {
-                    console.log("DEBUG: No custom token or invalid. Attempting anonymous sign-in...");
-                    await signInAnonymously(auth);
-                    console.log("DEBUG: Anonymous sign-in successful.");
+                    console.warn("DEBUG: No custom initial auth token provided. Firebase authentication will not be performed automatically. App will require manual 'master' login and successful Firebase auth to proceed.");
+                    // Não há tentativa de login anônimo automático aqui. O onAuthStateChanged lidará com o estado.
                 }
             } catch (error) {
-                console.error("DEBUG: Error during initial authentication attempt:", error.code, error.message);
-                // Only show modal if it's a critical auth error, not just "already logged in"
-                if (error.code !== 'auth/already-signed-in') {
-                    showModal(`Erro na autenticação inicial. Tente novamente. Detalhes: ${error.message}`);
-                }
+                console.error("DEBUG: Error during initial authentication attempt with custom token:", error.code, error.message);
+                // No modal here, just let the login screen show
+                loginScreen.classList.remove('hidden');
+                appScreen.classList.add('hidden');
+                isAuthReady = false;
             }
         }
 
-        initialAuthAttempt(); // Call the initial authentication attempt function
+        initialAuthAttempt(); // Chama a função de tentativa de autenticação inicial
 
-        // Listener for the login button
+        // Listener para o botão de login
         loginButton.addEventListener('click', async () => {
             console.log("DEBUG: Login button clicked.");
             const username = usernameInput.value;
             const password = passwordInput.value;
 
-            // Local credentials validation (only for 'master' user)
+            // Validação de credenciais locais (apenas para o usuário 'master')
             if (username === 'master' && password === '123mudar') {
                 console.log("DEBUG: Local credentials are valid (master user).");
                 loginError.classList.add('hidden');
+
+                // Se o Firebase não estiver autenticado, tenta autenticar anonimamente
                 if (!auth.currentUser) {
-                    console.log("DEBUG: No current Firebase user. Attempting anonymous sign-in after local login check...");
                     try {
+                        console.log("DEBUG: Firebase user is null. Attempting anonymous sign-in...");
                         await signInAnonymously(auth);
-                        console.log("DEBUG: Anonymous sign-in successful after local login.");
+                        console.log("DEBUG: Anonymous sign-in successful. onAuthStateChanged will handle UI.");
+                        // The onAuthStateChanged listener will now trigger and set isAuthReady to true
+                        // and transition the UI.
                     } catch (error) {
-                        console.error("DEBUG: Error attempting signInAnonymously after local login:", error.code, error.message);
-                        showModal(`Erro ao autenticar. Tente novamente. Detalhes: ${error.message}`);
+                        console.error("DEBUG: Error during anonymous sign-in after local master login:", error.code, error.message);
+                        showModal(`Erro ao autenticar no Firebase. Detalhes: ${error.message}. Tente novamente.`);
+                        return; // Stop here if Firebase auth fails
                     }
                 } else {
-                    console.log("DEBUG: User already authenticated, proceeding to main screen.");
-                    // The onAuthStateChanged listener will handle the screen transition and listener setup.
+                    console.log("DEBUG: Firebase user already authenticated. Proceeding to main screen.");
                     loginScreen.classList.add('hidden');
                     appScreen.classList.remove('hidden');
-                    isAuthReady = true;
+                    isAuthReady = true; // Ensure this is true if already authenticated
                     loadCompanyName();
-                    if (username === 'master') {
-                        tabCadastroCaminhoes.classList.remove('hidden');
-                    } else {
-                        tabCadastroCaminhoes.classList.add('hidden');
-                    }
-                    setupRealtimeListeners();
+                    tabCadastroCaminhoes.classList.remove('hidden'); // Show for master
+                    setupRealtimeListeners(); // Ensure listeners are set up
                 }
             } else {
                 loginError.classList.remove('hidden');
@@ -819,7 +811,7 @@
             }
         });
 
-        // Listener for the password visibility toggle button
+        // Listener para o botão de alternar visibilidade da senha
         togglePasswordButton.addEventListener('click', () => {
             const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
             passwordInput.setAttribute('type', type);
@@ -827,11 +819,11 @@
             togglePasswordButton.querySelector('i').classList.toggle('fa-eye-slash');
         });
 
-        // Listener for the logout button
+        // Listener para o botão de logout
         logoutButton.addEventListener('click', async () => {
             try {
                 console.log("DEBUG: Attempting logout...");
-                await signOut(auth); // Sign out the Firebase user
+                await signOut(auth); // Desloga o usuário do Firebase
                 showModal("Você foi desconectado com sucesso.");
             } catch (error) {
                 console.error("DEBUG: Error during logout:", error.code, error.message);
@@ -839,16 +831,16 @@
             }
         });
 
-        // --- Company Name Configuration ---
+        // --- Configuração do Nome da Empresa ---
         /**
-         * Loads the company name from localStorage or uses a default value.
+         * Carrega o nome da empresa do localStorage ou usa um valor padrão.
          */
         function loadCompanyName() {
             const companyName = localStorage.getItem('companyName') || 'Transportes - Sistema de Acertos';
             companyNameSpan.textContent = companyName;
         }
 
-        // Listener for the edit company name button
+        // Listener para o botão de editar nome da empresa
         editCompanyNameButton.addEventListener('click', async () => {
             const currentName = companyNameSpan.textContent;
             const newName = prompt("Digite o novo nome da empresa:", currentName);
@@ -861,44 +853,44 @@
             }
         });
 
-        // --- Tab Navigation ---
+        // --- Navegação por Abas ---
         /**
-         * Activates the specified tab and deactivates others.
-         * @param {string} tabId - The ID of the tab button to activate (e.g., 'tab-acertos').
+         * Ativa a aba especificada e desativa as outras.
+         * @param {string} tabId - O ID do botão da aba a ser ativada (ex: 'tab-acertos').
          */
         function activateTab(tabId) {
-            // Remove 'active-tab' class and styles from all tabs
+            // Remove a classe 'active-tab' e estilos de todas as abas
             document.querySelectorAll('.tab-button').forEach(button => {
                 button.classList.remove('active-tab', 'text-blue-600');
                 button.classList.add('text-gray-600');
             });
-            // Hide all tab content
+            // Esconde todo o conteúdo das abas
             document.querySelectorAll('.tab-content').forEach(content => {
                 content.classList.remove('active');
             });
 
-            // Activate the clicked tab and show its content
+            // Ativa a aba clicada e mostra seu conteúdo
             document.getElementById(tabId).classList.add('active-tab', 'text-blue-600');
             document.getElementById(`content-${tabId.replace('tab-', '')}`).classList.add('active');
         }
 
-        // Listeners for tab buttons
+        // Listeners para os botões das abas
         tabAcertos.addEventListener('click', () => activateTab('tab-acertos'));
         tabCaixa.addEventListener('click', () => activateTab('tab-caixa'));
         tabCadastroCaminhoes.addEventListener('click', () => activateTab('tab-cadastro-caminhoes'));
 
-        // --- Currency Formatting ---
+        // --- Formatação de Moeda ---
         /**
-         * Formats a numeric value in an input field to Brazilian currency format (BRL).
-         * @param {HTMLInputElement} input - The input element to be formatted.
+         * Formata um valor numérico em um campo de entrada para o formato de moeda brasileira (BRL).
+         * @param {HTMLInputElement} input - O elemento de entrada a ser formatado.
          */
         function formatCurrency(input) {
-            let value = input.value.replace(/\D/g, ''); // Remove everything that is not a digit
+            let value = input.value.replace(/\D/g, ''); // Remove tudo que não for dígito
             if (value === '') {
                 input.value = '';
                 return;
             }
-            // Convert to number, divide by 100 (for cents) and format to Brazilian currency
+            // Converte para número, divide por 100 (para centavos) e formata para moeda brasileira
             value = (parseInt(value) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             input.value = value;
         }
@@ -910,11 +902,21 @@
             }
         });
 
-        // --- Date Helper Functions ---
+        // Custom formatting for negative currency values (R$ - X,XX)
+        function formatNegativeCurrency(value) {
+            if (value >= 0) {
+                return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            } else {
+                const absoluteValue = Math.abs(value);
+                return `R$ - ${absoluteValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            }
+        }
+
+        // --- Funções Auxiliares de Data ---
         /**
-         * Formats a date string (YYYY-MM-DD) to DD/MM/YYYY.
-         * @param {string} dateString - The date string in YYYY-MM-DD format.
-         * @returns {string} The formatted date in DD/MM/YYYY or 'N/A' if invalid.
+         * Formata uma string de data (YYYY-MM-DD) para DD/MM/YYYY.
+         * @param {string} dateString - A string de data no formato YYYY-MM-DD.
+         * @returns {string} A data formatada em DD/MM/YYYY ou 'N/A' se inválida.
          */
         function formatDateToDDMMYYYY(dateString) {
             if (!dateString) return 'N/A';
@@ -922,30 +924,30 @@
                 const [year, month, day] = dateString.split('-');
                 return `${day}/${month}/${year}`;
             } catch (e) {
-                console.error("DEBUG: Error formatting date:", dateString, e);
+                console.error("DEBUG: Erro ao formatar data:", dateString, e);
                 return dateString;
             }
         }
 
         /**
-         * Adds a number of days to a date and returns the new date in YYYY-MM-DD format.
-         * @param {string} dateString - The initial date (YYYY-MM-DD).
-         * @param {number} days - The number of days to add.
-         * @returns {string} The new date in YYYY-MM-DD format.
+         * Adiciona um número de dias a uma data e retorna a nova data no formato YYYY-MM-DD.
+         * @param {string} dateString - A data inicial (YYYY-MM-DD).
+         * @param {number} days - O número de dias a adicionar.
+         * @returns {string} A nova data no formato YYYY-MM-DD.
          */
         function addDaysToDate(dateString, days) {
-            const date = new Date(dateString + 'T00:00:00'); // Ensures the date is interpreted as local
+            const date = new Date(dateString + 'T00:00:00'); // Garante que a data seja interpretada como local
             date.setDate(date.getDate() + days);
             return date.toISOString().split('T')[0];
         }
 
-        // --- Travel Settlement Tab Logic ---
+        // --- Lógica da Aba de Acertos de Viagem ---
         let expenseCount = 0;
 
         /**
-         * Adds a new expense field to the settlement form.
-         * @param {string} description - Initial expense description.
-         * @param {string} value - Initial expense value.
+         * Adiciona um novo campo de despesa ao formulário de acerto.
+         * @param {string} description - Descrição inicial da despesa.
+         * @param {string} value - Valor inicial da despesa.
          */
         function addDespesaField(description = '', value = '') {
             const div = document.createElement('div');
@@ -985,7 +987,7 @@
         addDespesaButton.addEventListener('click', () => addDespesaField());
 
         /**
-         * Calculates the "sobra" (remaining amount) of the settlement based on freight, commission, and expenses.
+         * Calcula a "sobra" (valor restante) do acerto com base no frete, comissão e despesas.
          */
         function calculateSobra() {
             const frete = parseFloat(freteInput.value.replace(/\D/g, '')) / 100 || 0;
@@ -1003,7 +1005,7 @@
         comissaoInput.addEventListener('input', calculateSobra);
 
         /**
-         * Clears all fields in the settlement form.
+         * Limpa todos os campos do formulário de acerto.
          */
         function clearAcertoForm() {
             acertoDataInput.value = '';
@@ -1030,7 +1032,7 @@
 
         clearAcertoButton.addEventListener('click', clearAcertoForm);
 
-        // --- Signature Canvas Logic (Reusable) ---
+        // --- Lógica do Canvas de Assinatura (Reutilizável) ---
         let isDrawingModalDriver = false;
         let lastXModalDriver = 0;
         let lastYModalDriver = 0;
@@ -1040,8 +1042,8 @@
         let lastYModalOwner = 0;
 
         /**
-         * Sets up drawing properties for a canvas context.
-         * @param {CanvasRenderingContext2D} ctx - The 2D canvas context.
+         * Configura as propriedades de desenho para um contexto de canvas.
+         * @param {CanvasRenderingContext2D} ctx - O contexto 2D do canvas.
          */
         function setupSignatureContext(ctx) {
             ctx.lineWidth = 2;
@@ -1051,10 +1053,10 @@
         }
 
         /**
-         * Gets the X and Y coordinates of the event relative to a specific canvas.
-         * @param {Event} e - The event (mouse or touch).
-         * @param {HTMLCanvasElement} canvas - The canvas element.
-         * @returns {Array<number>} An array [x, y] of the coordinates.
+         * Obtém as coordenadas X e Y do evento em relação a um canvas específico.
+         * @param {Event} e - O evento (mouse ou touch).
+         * @param {HTMLCanvasElement} canvas - O elemento canvas.
+         * @returns {Array<number>} Um array [x, y] das coordenadas.
          */
         function getCoordinates(e, canvas) {
             const rect = canvas.getBoundingClientRect();
@@ -1072,10 +1074,10 @@
         }
 
         /**
-         * Clears all content from a signature canvas.
-         * @param {CanvasRenderingContext2D} ctx - The 2D canvas context.
-         * @param {HTMLCanvasElement} canvas - The canvas element.
-         * @param {boolean} returnBlankDataUrl - If true, returns the data URL of a blank canvas.
+         * Limpa todo o conteúdo de um canvas de assinatura.
+         * @param {CanvasRenderingContext2D} ctx - O contexto 2D do canvas.
+         * @param {HTMLCanvasElement} canvas - O elemento canvas.
+         * @param {boolean} returnBlankDataUrl - Se verdadeiro, retorna a URL de dados de um canvas em branco.
          */
         function clearSignatureCanvas(ctx, canvas, returnBlankDataUrl = false) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -1086,7 +1088,7 @@
             }
         }
 
-        // --- Initialization and Listeners for Driver Signature (Modal) ---
+        // --- Inicialização e Listeners para Assinatura do Motorista (Modal) ---
         setupSignatureContext(modalDriverSignatureCtx);
         clearSignatureCanvas(modalDriverSignatureCtx, modalDriverSignatureCanvas);
         modalDriverSignatureCanvas.addEventListener('mousedown', (e) => {
@@ -1133,7 +1135,7 @@
         });
         clearModalDriverSignatureButton.addEventListener('click', () => clearSignatureCanvas(modalDriverSignatureCtx, modalDriverSignatureCanvas));
 
-        // --- Initialization and Listeners for Owner Signature (Modal) ---
+        // --- Inicialização e Listeners para Assinatura do Proprietário (Modal) ---
         setupSignatureContext(modalOwnerSignatureCtx);
         clearSignatureCanvas(modalOwnerSignatureCtx, modalOwnerSignatureCanvas);
         modalOwnerSignatureCanvas.addEventListener('mousedown', (e) => {
@@ -1180,7 +1182,7 @@
         });
         clearModalOwnerSignatureButton.addEventListener('click', () => clearSignatureCanvas(modalOwnerSignatureCtx, modalOwnerSignatureCanvas));
 
-        // Listener for the settlement form submission
+        // Listener para o envio do formulário de acerto
         acertoForm.addEventListener('submit', async (e) => {
             e.preventDefault();
 
@@ -1354,14 +1356,14 @@
         });
 
         /**
-         * Sets up the real-time listener for the settlements collection in Firestore.
-         * Updates the settlements table and totalizers whenever there's a change.
+         * Configura o listener em tempo real para a coleção de acertos no Firestore.
+         * Atualiza a tabela de acertos e os totalizadores sempre que há uma mudança.
          */
         function setupAcertosListener() {
-            if (unsubscribeAcertos) unsubscribeAcertos(); // Unsubscribe previous listener, if any
+            if (unsubscribeAcertos) unsubscribeAcertos(); // Cancela o listener anterior, se houver
 
             if (!isAuthReady) {
-                console.warn("DEBUG: Authentication system not ready for settlements listener. Skipping setup.");
+                console.warn("DEBUG: Sistema de autenticação não pronto para o listener de acertos. Pulando a configuração.");
                 return;
             }
             console.log("DEBUG: Setting up Settlements listener for fixed user:", FIXED_USER_ID);
@@ -1385,9 +1387,9 @@
         }
 
         /**
-         * Returns a list of filtered settlements based on current filter inputs.
-         * @param {Array<Object>} acertos - The complete list of settlements.
-         * @returns {Array<Object>} The list of filtered settlements.
+         * Retorna uma lista de acertos filtrados com base nas entradas de filtro atuais.
+         * @param {Array<Object>} acertos - A lista completa de acertos.
+         * @returns {Array<Object>} A lista de acertos filtrados.
          */
         function getFilteredAcertos(acertos) {
             const sortedAcertos = [...acertos].sort((a, b) => new Date(b.data + "T00:00:00") - new Date(a.data + "T00:00:00"));
@@ -1417,8 +1419,8 @@
         }
 
         /**
-         * Renders the settlements table based on the provided data.
-         * @param {Array<Object>} acertosToRender - A list of already filtered settlement objects.
+         * Renderiza a tabela de acertos com base nos dados fornecidos.
+         * @param {Array<Object>} acertosToRender - Uma lista de objetos de acerto já filtrados.
          */
         function renderAcertosTable(acertosToRender) {
             acertosTableBody.innerHTML = '';
@@ -1477,8 +1479,8 @@
         }
 
         /**
-         * Calculates and displays the totals for freight, commission, expenses, and remaining amount from the filtered settlements.
-         * @param {Array<Object>} acertosToCalculate - A list of already filtered settlement objects.
+         * Calcula e exibe os totais de frete, comissão, despesas e valor restante dos acertos filtrados.
+         * @param {Array<Object>} acertosToCalculate - Uma lista de objetos de acerto já filtrados.
          */
         function calculateAcertosTotals(acertosToCalculate) {
             let totalFrete = 0;
@@ -1523,8 +1525,8 @@
 
 
         /**
-         * Loads the data of a specific settlement into the form for editing.
-         * @param {string} id - The ID of the settlement document in Firestore.
+         * Carrega os dados de um acerto específico no formulário para edição.
+         * @param {string} id - O ID do documento de acerto no Firestore.
          */
         async function editAcerto(id) {
             if (!isAuthReady) return;
@@ -1578,8 +1580,8 @@
         }
 
         /**
-         * Deletes a settlement and its linked caixa (sobra/falta) entries.
-         * @param {string} id - The ID of the settlement document to be deleted.
+         * Exclui um acerto e suas entradas de caixa vinculadas (sobra/falta).
+         * @param {string} id - O ID do documento de acerto a ser excluído.
          */
         async function deleteAcertoAndCaixa(id) {
             if (!isAuthReady) return;
@@ -1608,8 +1610,8 @@
         }
 
         /**
-         * Displays the details of a settlement in a modal.
-         * @param {string} id - The ID of the settlement document.
+         * Exibe os detalhes de um acerto em um modal.
+         * @param {string} id - O ID do documento de acerto.
          */
         async function viewAcertoDetails(id) {
             if (!isAuthReady) return;
@@ -1664,8 +1666,8 @@
         }
 
         /**
-         * Opens the signature modal and loads existing signatures for the settlement.
-         * @param {string} acertoId - The ID of the settlement for which signatures will be made/viewed.
+         * Abre o modal de assinatura e carrega as assinaturas existentes para o acerto.
+         * @param {string} acertoId - O ID do acerto para o qual as assinaturas serão feitas/visualizadas.
          */
         async function openSignatureModal(acertoId) {
             if (!isAuthReady) {
@@ -1708,7 +1710,7 @@
             }
         }
 
-        // Listener for the "Save Signatures and Generate Receipt" button inside the modal
+        // Listener para o botão "Salvar Assinaturas e Gerar Recibo" dentro do modal
         saveAndGenerateReciboButton.addEventListener('click', async () => {
             if (!currentAcertoIdForSignature) {
                 showModal("Nenhum acerto selecionado para salvar assinaturas.");
@@ -1737,21 +1739,21 @@
             }
         });
 
-        // Listener for the "Cancel" button in the signature modal
+        // Listener para o botão "Cancelar" no modal de assinatura
         cancelSignatureButton.addEventListener('click', () => {
             signatureModal.style.display = 'none';
             currentAcertoIdForSignature = null;
         });
 
-        // Listener for the close (X) button in the signature modal
+        // Listener para o botão de fechar (X) no modal de assinatura
         closeSignatureModalButton.addEventListener('click', () => {
             signatureModal.style.display = 'none';
             currentAcertoIdForSignature = null;
         });
 
         /**
-         * Generates a PDF receipt for a specific settlement, containing only the commission value.
-         * @param {string} id - The ID of the settlement document.
+         * Gera um recibo PDF para um acerto específico, contendo apenas o valor da comissão.
+         * @param {string} id - O ID do documento de acerto.
          */
         async function generateReciboPDF(id) {
             if (!isAuthReady) return;
@@ -1829,7 +1831,7 @@
         };
 
 
-        // --- Caixa Tab Logic (Cash Flow) ---
+        // --- Lógica da Aba de Caixa (Fluxo de Caixa) ---
         caixaIsBoletoCheckbox.addEventListener('change', () => {
             if (caixaTipoSelect.value === 'saida' && caixaIsBoletoCheckbox.checked) {
                 vencimentoField.classList.remove('hidden');
@@ -1874,22 +1876,22 @@
         });
 
         /**
-         * Clears all fields in the caixa form.
+         * Limpa todos os campos do formulário de caixa.
          */
         function clearCaixaForm() {
-            caixaTipoSelect.value = 'entrada';
+            caixaTipoSelect.value = 'saida'; // Default to 'saida'
             caixaValorInput.value = '';
             caixaCategoriaInput.value = '';
             caixaDataInput.value = '';
             caixaDiasVencimentoInput.value = '';
             caixaDiasApresentacaoChequeInput.value = '';
             caixaNumParcelasInput.value = '1';
-            caixaIntervaloParcelasInput.value = '30';
+            caixaIntervaloParcelasInput.value = ''; // Intervalo entre parcelas em branco por padrão
             caixaDescricaoTextarea.value = '';
             caixaObservacoesTextarea.value = '';
             caixaIsBoletoCheckbox.checked = false;
             caixaIsChequeCheckbox.checked = false;
-            vencimentoField.classList.add('hidden');
+            vencimentoField.classList.add('hidden'); // Escondido por padrão, só aparece se for boleto/saída
             apresentacaoChequeField.classList.add('hidden');
             if (saveCaixaButton) {
                 saveCaixaButton.textContent = 'Salvar Lançamento';
@@ -1904,7 +1906,7 @@
 
         clearCaixaButton.addEventListener('click', clearCaixaForm);
 
-        // Listener for the caixa form submission
+        // Listener para o envio do formulário de caixa
         caixaForm.addEventListener('submit', async (e) => {
             e.preventDefault();
 
@@ -1916,7 +1918,7 @@
             const tipo = caixaTipoSelect.value;
             const valorTotal = parseFloat(caixaValorInput.value.replace(/\D/g, '')) / 100 || 0;
             const categoria = caixaCategoriaInput.value.trim();
-            const data = caixaDataInput.value;
+            const dataLancamento = caixaDataInput.value;
             const descricaoBase = caixaDescricaoTextarea.value.trim();
             const observacoes = caixaObservacoesTextarea.value.trim();
             const isBoleto = caixaIsBoletoCheckbox.checked;
@@ -1924,9 +1926,9 @@
             const diasVencimento = parseInt(caixaDiasVencimentoInput.value, 10) || 0;
             const diasApresentacaoCheque = parseInt(caixaDiasApresentacaoChequeInput.value, 10) || 0;
             const numParcelas = parseInt(caixaNumParcelasInput.value, 10) || 1;
-            const intervaloParcelas = parseInt(caixaIntervaloParcelasInput.value, 10) || 30;
+            const intervaloParcelasText = caixaIntervaloParcelasInput.value.trim().toLowerCase();
 
-            if (!valorTotal || valorTotal <= 0 || !categoria || !data) {
+            if (!valorTotal || valorTotal <= 0 || !categoria || !dataLancamento) {
                 showModal("Por favor, preencha os campos obrigatórios: Valor, Categoria e Data.");
                 return;
             }
@@ -1942,10 +1944,6 @@
                 showModal("O número de parcelas deve ser no mínimo 1.");
                 return;
             }
-            if (intervaloParcelas < 1) {
-                showModal("O intervalo entre parcelas deve ser no mínimo 1 dia.");
-                return;
-            }
 
             const editId = saveCaixaButton.dataset.editId;
             const caixaCollectionRef = collection(db, `artifacts/${appId}/public/data/caixa`);
@@ -1957,14 +1955,14 @@
                     const existingDoc = await getDoc(docRef);
 
                     if (existingDoc.exists()) {
-                        const realVencimento = isBoleto ? addDaysToDate(data, diasVencimento) : '';
-                        const realApresentacaoCheque = isCheque ? addDaysToDate(data, diasApresentacaoCheque) : '';
+                        const realVencimento = isBoleto ? addDaysToDate(dataLancamento, diasVencimento) : '';
+                        const realApresentacaoCheque = isCheque ? addDaysToDate(dataLancamento, diasApresentacaoCheque) : '';
 
                         const caixaEntry = {
                             tipo: tipo,
                             valor: valorTotal,
                             categoria: categoria,
-                            data: data,
+                            data: dataLancamento,
                             descricao: descricaoBase,
                             observacoes: observacoes,
                             vencimento: realVencimento,
@@ -1973,7 +1971,7 @@
                             apresentacaoCheque: realApresentacaoCheque,
                             pago: (tipo === 'entrada') ? true : (existingDoc.data().pago ?? false),
                             timestamp: new Date(),
-                            numParcelas: numParcelas,
+                            numParcelas: 1, // When editing, it's always a single entry
                             parcelaAtual: 1
                         };
                         console.log("DEBUG: Payload for Firestore (caixa update - single entry):", caixaEntry);
@@ -1984,23 +1982,30 @@
                     const valorPorParcela = valorTotal / numParcelas;
                     const promises = [];
 
+                    let currentVencimentoDate = isBoleto ? new Date(dataLancamento + 'T00:00:00') : null;
+                    let currentApresentacaoChequeDate = isCheque ? new Date(dataLancamento + 'T00:00:00') : null;
+
+                    if (isBoleto && currentVencimentoDate) {
+                        currentVencimentoDate.setDate(currentVencimentoDate.getDate() + diasVencimento);
+                    }
+                    if (isCheque && currentApresentacaoChequeDate) {
+                        currentApresentacaoChequeDate.setDate(currentApresentacaoChequeDate.getDate() + diasApresentacaoCheque);
+                    }
+
                     for (let i = 0; i < numParcelas; i++) {
-                        const parcelaDate = new Date(data + "T00:00:00");
-                        parcelaDate.setDate(parcelaDate.getDate() + (i * intervaloParcelas));
-                        const formattedParcelaData = parcelaDate.toISOString().split('T')[0];
+                        // Calculate data for current parcel
+                        const dataParcela = new Date(dataLancamento + 'T00:00:00');
+                        // No need to add interval to dataParcela, as it's the date of the transaction, not the due date
+                        const formattedDataParcela = dataParcela.toISOString().split('T')[0];
 
                         let formattedParcelaVencimento = '';
-                        if (isBoleto) {
-                            const vencimentoDate = new Date(data + "T00:00:00");
-                            vencimentoDate.setDate(vencimentoDate.getDate() + diasVencimento + (i * intervaloParcelas));
-                            formattedParcelaVencimento = vencimentoDate.toISOString().split('T')[0];
+                        if (isBoleto && currentVencimentoDate) {
+                            formattedParcelaVencimento = currentVencimentoDate.toISOString().split('T')[0];
                         }
 
                         let formattedParcelaApresentacaoCheque = '';
-                        if (isCheque) {
-                            const apresentacaoChequeDate = new Date(data + "T00:00:00");
-                            apresentacaoChequeDate.setDate(apresentacaoChequeDate.getDate() + diasApresentacaoCheque + (i * intervaloParcelas));
-                            formattedParcelaApresentacaoCheque = apresentacaoChequeDate.toISOString().split('T')[0];
+                        if (isCheque && currentApresentacaoChequeDate) {
+                            formattedParcelaApresentacaoCheque = currentApresentacaoChequeDate.toISOString().split('T')[0];
                         }
 
                         const descricaoParcela = numParcelas > 1 ? `${descricaoBase} (Parcela ${i + 1}/${numParcelas})` : descricaoBase;
@@ -2009,7 +2014,7 @@
                             tipo: tipo,
                             valor: valorPorParcela,
                             categoria: categoria,
-                            data: formattedParcelaData,
+                            data: formattedDataParcela,
                             descricao: descricaoParcela,
                             observacoes: observacoes,
                             vencimento: formattedParcelaVencimento,
@@ -2023,6 +2028,74 @@
                         };
                         console.log(`DEBUG: Payload for Firestore (new caixa entry - parcel ${i + 1}):`, caixaEntry);
                         promises.push(addDoc(caixaCollectionRef, caixaEntry));
+
+                        // Calculate next vencimento/apresentacao date for next parcel
+                        if (i < numParcelas - 1) {
+                            if (intervaloParcelasText === '') {
+                                // Default to monthly, keeping the day
+                                if (currentVencimentoDate) {
+                                    const originalDay = currentVencimentoDate.getDate();
+                                    currentVencimentoDate.setMonth(currentVencimentoDate.getMonth() + 1);
+                                    if (currentVencimentoDate.getDate() !== originalDay) {
+                                        currentVencimentoDate.setDate(0); // Go to last day of previous month
+                                    }
+                                }
+                                if (currentApresentacaoChequeDate) {
+                                    const originalDay = currentApresentacaoChequeDate.getDate();
+                                    currentApresentacaoChequeDate.setMonth(currentApresentacaoChequeDate.getMonth() + 1);
+                                    if (currentApresentacaoChequeDate.getDate() !== originalDay) {
+                                        currentApresentacaoChequeDate.setDate(0); // Go to last day of previous month
+                                    }
+                                }
+                            } else if (intervaloParcelasText.includes('dias')) {
+                                const days = parseInt(intervaloParcelasText.replace('dias', '').trim());
+                                if (!isNaN(days)) {
+                                    if (currentVencimentoDate) currentVencimentoDate.setDate(currentVencimentoDate.getDate() + days);
+                                    if (currentApresentacaoChequeDate) currentApresentacaoChequeDate.setDate(currentApresentacaoChequeDate.getDate() + days);
+                                } else {
+                                    showModal("Intervalo de dias inválido. Use 'X dias' ou deixe em branco para mensal.");
+                                    return;
+                                }
+                            } else if (intervaloParcelasText.includes('mês') || intervaloParcelasText.includes('meses')) {
+                                const months = parseInt(intervaloParcelasText.replace('mês', '').replace('meses', '').trim());
+                                if (!isNaN(months)) {
+                                    if (currentVencimentoDate) {
+                                        const originalDay = currentVencimentoDate.getDate();
+                                        currentVencimentoDate.setMonth(currentVencimentoDate.getMonth() + months);
+                                        if (currentVencimentoDate.getDate() !== originalDay) {
+                                            currentVencimentoDate.setDate(0);
+                                        }
+                                    }
+                                    if (currentApresentacaoChequeDate) {
+                                        const originalDay = currentApresentacaoChequeDate.getDate();
+                                        currentApresentacaoChequeDate.setMonth(currentApresentacaoChequeDate.getMonth() + months);
+                                        if (currentApresentacaoChequeDate.getDate() !== originalDay) {
+                                            currentApresentacaoChequeDate.setDate(0);
+                                        }
+                                    }
+                                } else {
+                                    showModal("Intervalo de meses inválido. Use 'X mês'/'X meses' ou deixe em branco para mensal.");
+                                    return;
+                                }
+                            } else {
+                                // Fallback if interval format is completely unexpected, assume monthly
+                                console.warn("DEBUG: Unexpected interval format, defaulting to monthly.");
+                                if (currentVencimentoDate) {
+                                    const originalDay = currentVencimentoDate.getDate();
+                                    currentVencimentoDate.setMonth(currentVencimentoDate.getMonth() + 1);
+                                    if (currentVencimentoDate.getDate() !== originalDay) {
+                                        currentVencimentoDate.setDate(0);
+                                    }
+                                }
+                                if (currentApresentacaoChequeDate) {
+                                    const originalDay = currentApresentacaoChequeDate.getDate();
+                                    currentApresentacaoChequeDate.setMonth(currentApresentacaoChequeDate.getMonth() + 1);
+                                    if (currentApresentacaoChequeDate.getDate() !== originalDay) {
+                                        currentApresentacaoChequeDate.setDate(0);
+                                    }
+                                }
+                            }
+                        }
                     }
                     await Promise.all(promises);
                     console.log("DEBUG: New caixa entries saved in Firestore.");
@@ -2037,14 +2110,14 @@
         });
 
         /**
-         * Sets up the real-time listener for the caixa collection in Firestore.
-         * Updates the caixa table, totalizers, and the expiring boletos alert.
+         * Configura o listener em tempo real para a coleção de caixa no Firestore.
+         * Atualiza a tabela de caixa, os totalizadores e o alerta de boletos vencendo.
          */
         function setupCaixaListener() {
             if (unsubscribeCaixa) unsubscribeCaixa();
 
             if (!isAuthReady) {
-                console.warn("DEBUG: Authentication system not ready for caixa listener. Skipping setup.");
+                console.warn("DEBUG: Sistema de autenticação não pronto para o listener de caixa. Pulando a configuração.");
                 return;
             }
             console.log("DEBUG: Setting up Caixa listener for fixed user:", FIXED_USER_ID);
@@ -2071,9 +2144,9 @@
         }
 
         /**
-         * Returns a list of filtered caixa entries based on current filter inputs.
-         * @param {Array<Object>} caixaEntries - The complete list of caixa entries.
-         * @returns {Array<Object>} The list of filtered caixa entries.
+         * Retorna uma lista de entradas de caixa filtradas com base nas entradas de filtro atuais.
+         * @param {Array<Object>} caixaEntries - A lista completa de entradas de caixa.
+         * @returns {Array<Object>} A lista de entradas de caixa filtradas.
          */
         function getFilteredCaixaEntries(caixaEntries) {
             const sortedCaixaEntries = [...caixaEntries].sort((a, b) => {
@@ -2139,8 +2212,8 @@
         }
 
         /**
-         * Renders the caixa entries table based on the provided data.
-         * @param {Array<Object>} caixaEntriesToRender - A list of already filtered caixa entry objects.
+         * Renderiza a tabela de entradas de caixa com base nos dados fornecidos.
+         * @param {Array<Object>} caixaEntriesToRender - Uma lista de objetos de entrada de caixa já filtrados.
          */
         function renderCaixaTable(caixaEntriesToRender) {
             caixaTableBody.innerHTML = '';
@@ -2158,7 +2231,7 @@
                     row.classList.add('paid-entry');
                 }
 
-                const valorClass = entry.tipo === 'entrada' ? 'text-green-600' : 'text-red-600';
+                const valorClass = entry.tipo === 'entrada' ? 'text-green-600' : 'text-blue-600';
                 
                 let statusText;
                 let actionButtons = '';
@@ -2217,8 +2290,8 @@
         }
 
         /**
-         * Calculates and displays the totals for entries, exits, and the current balance of the caixa, based on the provided entries.
-         * @param {Array<Object>} caixaEntriesToCalculate - A list of already filtered caixa entry objects.
+         * Calcula e exibe os totais de entradas, saídas e o saldo atual do caixa, com base nas entradas fornecidas.
+         * @param {Array<Object>} caixaEntriesToCalculate - Uma lista de objetos de entrada de caixa já filtrados.
          */
         function calculateCaixaTotals(caixaEntriesToCalculate) {
             let totalEntradas = 0;
@@ -2234,7 +2307,15 @@
 
             totalEntradasSpan.textContent = totalEntradas.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
             totalSaidasSpan.textContent = totalSaidas.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-            totalSaldoSpan.textContent = (totalEntradas - totalSaidas).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            
+            const saldoAtual = totalEntradas - totalSaidas;
+            totalSaldoSpan.textContent = formatNegativeCurrency(saldoAtual); // Use custom formatter
+            totalSaldoSpan.classList.remove('text-green-600', 'text-red-600');
+            if (saldoAtual >= 0) {
+                totalSaldoSpan.classList.add('text-green-600');
+            } else {
+                totalSaldoSpan.classList.add('text-red-600');
+            }
         }
 
         filterCaixaButton.addEventListener('click', () => {
@@ -2254,7 +2335,7 @@
 
 
         /**
-         * Generates a PDF report of caixa entries based on applied filters.
+         * Gera um relatório PDF das entradas de caixa com base nos filtros aplicados.
          */
         generateAcertoReportButton.addEventListener('click', async () => {
             if (!isAuthReady) {
@@ -2350,8 +2431,8 @@
         });
 
         /**
-         * Loads the data of a specific caixa entry into the form for editing.
-         * @param {string} id - The ID of the caixa entry document.
+         * Carrega os dados de uma entrada de caixa específica no formulário para edição.
+         * @param {string} id - O ID do documento da entrada.
          */
         async function editCaixaEntry(id) {
             console.log("DEBUG: Entering editCaixaEntry for ID:", id);
@@ -2378,7 +2459,7 @@
                 caixaIsBoletoCheckbox.checked = entry.isBoleto ?? false;
                 caixaIsChequeCheckbox.checked = entry.isCheque ?? false;
                 caixaNumParcelasInput.value = entry.numParcelas || 1;
-                caixaIntervaloParcelasInput.value = '30';
+                caixaIntervaloParcelasInput.value = ''; // Always clear interval when editing a single entry
 
                 if (entry.isBoleto && entry.vencimento && entry.data) {
                     const dataLancamento = new Date(entry.data + 'T00:00:00');
@@ -2423,8 +2504,8 @@
         }
 
         /**
-         * Marks a caixa entry as paid.
-         * @param {string} id - The ID of the entry document.
+         * Marca uma entrada de caixa como paga.
+         * @param {string} id - O ID do documento da entrada.
          */
         async function markCaixaAsPaid(id) {
             if (!isAuthReady) return;
@@ -2443,8 +2524,8 @@
         }
 
         /**
-         * Deletes a caixa entry.
-         * @param {string} id - The ID of the entry document.
+         * Exclui uma entrada de caixa.
+         * @param {string} id - O ID do documento da entrada.
          */
         async function deleteCaixaEntry(id) {
             if (!isAuthReady) return;
@@ -2460,7 +2541,7 @@
         }
 
         /**
-         * Generates a PDF report of caixa entries based on applied filters.
+         * Gera um relatório PDF das entradas de caixa com base nos filtros aplicados.
          */
         async function generateCaixaReportPDF() {
             console.log("DEBUG: generateCaixaReportPDF called.");
@@ -2568,10 +2649,10 @@
 
         generateCaixaReportButton.addEventListener('click', generateCaixaReportPDF);
 
-        // --- Expiring Boleto Alert ---
+        // --- Alerta de Boleto Vencendo ---
         /**
-         * Checks if there are boletos expiring today and displays a fixed alert on the screen.
-         * @param {Array<Object>} caixaEntries - A list of caixa entry objects.
+         * Verifica se há boletos vencendo hoje e exibe um alerta fixo na tela.
+         * @param {Array<Object>} caixaEntries - Uma lista de objetos de entrada de caixa.
          */
         function checkBoletosVencendoHoje(caixaEntries) {
             console.log("DEBUG: checkBoletosVencendoHoje called with", caixaEntries.length, "entries.");
@@ -2619,9 +2700,9 @@
             }
         }
 
-        // --- Truck Registration Tab Logic ---
+        // --- Lógica da Aba de Cadastro de Caminhões ---
         /**
-         * Clears the truck registration form fields.
+         * Limpa os campos do formulário de cadastro de caminhões.
          */
         function clearTruckRegistrationForm() {
             truckNameInput.value = '';
@@ -2639,7 +2720,7 @@
 
         clearTruckButton.addEventListener('click', clearTruckRegistrationForm);
 
-        // Listener for the truck registration form submission
+        // Listener para o envio do formulário de cadastro de caminhões
         truckRegistrationForm.addEventListener('submit', async (e) => {
             e.preventDefault();
 
@@ -2698,14 +2779,14 @@
         });
 
         /**
-         * Sets up the real-time listener for the trucks collection in Firestore.
-         * Updates the trucks table and the truck select in settlements.
+         * Configura o listener em tempo real para a coleção de caminhões no Firestore.
+         * Atualiza a tabela de caminhões e o select de caminhões nos acertos.
          */
         function setupTrucksListener() {
             if (unsubscribeTrucks) unsubscribeTrucks();
 
             if (!isAuthReady) {
-                console.warn("DEBUG: Authentication system not ready for trucks listener. Skipping setup.");
+                console.warn("DEBUG: Sistema de autenticação não pronto para o listener de caminhões. Pulando a configuração.");
                 return;
             }
             console.log("DEBUG: Setting up Trucks listener for fixed user:", FIXED_USER_ID);
@@ -2734,8 +2815,8 @@
         }
 
         /**
-         * Renders the registered trucks table.
-         * @param {Array<Object>} trucks - A list of truck objects.
+         * Renderiza a tabela de caminhões cadastrados.
+         * @param {Array<Object>} trucks - Uma lista de objetos de caminhão.
          */
         function renderTrucksTable(trucks) {
             trucksTableBody.innerHTML = '';
@@ -2774,8 +2855,8 @@
         }
 
         /**
-         * Loads the data of a specific truck into the registration form for editing.
-         * @param {string} id - The ID of the truck document.
+         * Carrega os dados de um caminhão específico no formulário de cadastro para edição.
+         * @param {string} id - O ID do documento do caminhão.
          */
         async function editTruck(id) {
             if (!isAuthReady) return;
@@ -2810,8 +2891,8 @@
         }
 
         /**
-         * Deletes a registered truck.
-         * @param {string} id - The ID of the truck document.
+         * Exclui um caminhão cadastrado.
+         * @param {string} id - O ID do documento do caminhão.
          */
         async function deleteTruck(id) {
             if (!isAuthReady) return;
@@ -2826,8 +2907,8 @@
         }
 
         /**
-         * Populates the truck select field in the settlement form with the plates of registered trucks.
-         * @param {Array<Object>} trucks - A list of truck objects.
+         * Popula o campo de seleção de caminhão no formulário de acerto com as placas dos caminhões cadastrados.
+         * @param {Array<Object>} trucks - Uma lista de objetos de caminhão.
          */
         function populateCaminhaoSelect(trucks) {
             caminhaoSelect.innerHTML = '<option value="">Selecione um caminhão</option>';
@@ -2840,8 +2921,8 @@
         }
 
         /**
-         * Populates the truck filter select field in the settlements table.
-         * @param {Array<Object>} trucks - A list of truck objects.
+         * Popula o campo de seleção de filtro de caminhão na tabela de acertos.
+         * @param {Array<Object>} trucks - Uma lista de objetos de caminhão.
          */
         function populateFilterCaminhaoSelect(trucks) {
             filterAcertoCaminhaoSelect.innerHTML = '<option value="">Todos os Caminhões</option>';
@@ -2853,9 +2934,9 @@
             });
         }
 
-        // --- Real-time Listener Setup ---
+        // --- Configuração de Listeners em Tempo Real ---
         /**
-         * Sets up all real-time Firestore listeners. Called after authentication.
+         * Configura todos os listeners em tempo real do Firestore. Chamado após a autenticação.
          */
         function setupRealtimeListeners() {
             console.log("DEBUG: Calling setupAcertosListener, setupCaixaListener, and setupTrucksListener.");
@@ -2864,7 +2945,7 @@
             setupTrucksListener();
         }
 
-        // Initial setup for date inputs to current day
+        // Configuração inicial para inputs de data para o dia atual
         const today = new Date();
         const yyyy = today.getFullYear();
         const mm = String(today.getMonth() + 1).padStart(2, '0');
@@ -2877,6 +2958,9 @@
         filterAcertoDataFinalInput.value = todayFormatted;
         filterCaixaDataInicialInput.value = todayFormatted;
         filterCaixaDataFinalInput.value = todayFormatted;
+
+        // Ensure default values are set on load for Caixa form
+        clearCaixaForm();
 
     </script>
 </body>
